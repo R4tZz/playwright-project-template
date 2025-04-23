@@ -1,0 +1,46 @@
+{
+  "name": "playwright-project-template",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx playwright test",
+    "test-headed": "npx playwright test --headed",
+    "test-trace": "npx playwright test --trace on",
+    "test-grep": "npx playwright test -g",
+    "test-list": "npx playwright test --list",
+    "test-chromium": "npx playwright test --project chromium",
+    "test-report": "npx playwright show-report reports/",
+    "ui-mode": "npx playwright test --ui",
+    "debug": "npx playwright test --debug",
+    "codegen": "npx playwright codegen",
+    "lint": "eslint . --ext .ts,.js",
+    "lint:fix": "eslint . --ext .ts,.js --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@playwright/test": "^1.52.0",
+    "@types/node": "^22.14.1",
+    "dotenv": "^16.5.0",
+    "playwright": "^1.52.0"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@typescript-eslint/eslint-plugin": "^8.31.0",
+    "@typescript-eslint/parser": "^8.31.0",
+    "eslint": "^9.25.1",
+    "eslint-config-prettier": "^10.1.2",
+    "eslint-plugin-playwright": "^2.2.0",
+    "eslint-plugin-prettier": "^5.2.6",
+    "globals": "^16.0.0",
+    "prettier": "^3.5.3"
+  },
+  "directories": {
+    "test": "tests"
+  },
+  "description": ""
+}

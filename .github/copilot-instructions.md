@@ -4,1096 +4,1314 @@
 
 This guide outlines best practices for writing maintainable, robust, and readable end-to-end tests using Playwright. It emphasizes the use of the Page Object Model (POM) design pattern and custom fixtures to promote code reuse and separation of concerns. The guide also covers modern testing approaches including soft assertions, parallel execution strategies, and enhanced debugging capabilities. Adhering to these practices will help ensure your test suite is scalable, reliable, and easy to manage.
 
+> **When generating code, Copilot should always prioritize maintainability, readability, and following the Page Object Model pattern.**
+
 This guide reflects the latest practices recommended in the official Playwright documentation as of 2025. Always refer to the [latest Playwright documentation](https://playwright.dev/docs/intro) for the most up-to-date information.
 
 ## Table of Contents
 
-1.  [Recommended Folder Structure](#recommended-folder-structure)
-2.  [General Best Practices](#general-best-practices)
-3.  [Locators](#locators)
-4.  [Page Object Model (POM)](#page-object-model-pom)
-    - [Structure](#structure)
-    - [Naming Conventions](#naming-conventions)
-    - [Locators in POM](#locators-in-pom)
-    - [Action Methods](#action-methods)
-    - [Assertions](#assertions-in-pom)
-    - [Example](#pom-example)
-5.  [Custom Fixtures](#custom-fixtures)
-    - [Purpose](#purpose)
-    - [Creating Fixtures](#creating-fixtures)
-    - [Using Fixtures](#using-fixtures)
-    - [Scope](#scope)
-    - [Example](#fixture-example)
-6.  [Assertions](#assertions)
-    - [Web-First Assertions](#web-first-assertions)
-    - [Soft Assertions](#soft-assertions)
-    - [Common Assertions](#common-assertions)
-7.  [Waiting Mechanisms](#waiting-mechanisms)
-8.  [Test Structure and Naming](#test-structure-and-naming)
-9.  [Configuration (`playwright.config.ts`)](#configuration-playwrightconfigts)
+### Core Principles
+1. [Recommended Folder Structure](#recommended-folder-structure) 
+2. [General Best Practices](#general-best-practices) 
+3. [Locators](#locators) - 📌 *Prioritize user-facing locators*
+
+### Design Patterns
+4. [Page Object Model (POM)](#page-object-model-pom) - 📌 *Primary pattern for all UI tests*
+   - [Structure](#structure)
+   - [Naming Conventions](#naming-conventions)
+   - [Locators in POM](#locators-in-pom)
+   - [Action Methods](#action-methods)
+   - [Assertions](#assertions-in-pom)
+   - [Example](#pom-example)
+5. [Custom Fixtures](#custom-fixtures) - 📌 *Use for setup/teardown and context sharing*
+   - [Purpose](#purpose)
+   - [Creating Fixtures](#creating-fixtures)
+   - [Using Fixtures](#using-fixtures)
+   - [Scope](#scope)
+   - [Example](#fixture-example)
+
+### Test Implementation
+6. [Assertions](#assertions) - 📌 *Always use web-first assertions*
+   - [Web-First Assertions](#web-first-assertions)
+   - [Soft Assertions](#soft-assertions)
+   - [Common Assertions](#common-assertions)
+7. [Waiting Mechanisms](#waiting-mechanisms) - 📌 *Avoid hard waits*
+8. [Test Structure and Naming](#test-structure-and-naming)
+9. [Configuration (`playwright.config.ts`)](#configuration-playwrightconfigts)
 10. [Parallel Testing](#parallel-testing)
 11. [Debugging](#debugging)
 12. [Clock Management](#clock-management)
 13. [Test Sharding](#test-sharding)
 14. [Performance Testing](#performance-testing)
 15. [Miscellaneous](#miscellaneous)
-16. [API Testing and Authentication](#api-testing-and-authentication)
-17. [Visual Testing and Snapshots](#visual-testing-and-snapshots)
-18. [Mobile Testing](#mobile-testing)
-19. [Security Testing](#security-testing)
-20. [Modern Web Features](#modern-web-features)
 
-## Recommended Folder Structure
+### Advanced Testing Scenarios
+16. [API Testing and Authentication](#api-testing-and-authentication) - 📌 *Use request context*
+17. [Visual Testing and Snapshots](#visual-testing-and-snapshots) - 📌 *Component-focused screenshots*
+18. [Mobile Testing](#mobile-testing) - 📌 *Use device emulation*
+19. [Security Testing](#security-testing) - 📌 *Test security headers and policies*
+20. [Modern Web Features](#modern-web-features) - 📌 *Handle shadow DOM and service workers*
 
-A well-organized folder structure is crucial for maintainability as your test suite grows. Here's a recommended structure that aligns with POM and fixture usage:
+## 🚨 Copilot Must Follow Rules
 
-```
-your-project-root/
-├── .env                # Environment variables (add to .gitignore)
-├── .gitignore          # Git ignore file
-├── package.json        # Project dependencies and scripts
-├── playwright.config.ts # Playwright configuration file
-├── tests/              # Root directory for test specifications
-│   ├── fixtures/       # Custom fixtures definitions (or a single fixtures.ts here)
-│   │   └── fixtures.ts
-│   ├── specs/          # Actual test files (can be further nested by feature)
-│   │   ├── auth/       # Tests related to authentication
-│   │   │   └── login.spec.ts
-│   │   ├── shopping_cart/ # Tests for shopping cart feature
-│   │   │   └── cart.spec.ts
-│   │   └── product_search.spec.ts
-│   └── example.spec.ts # Default Playwright example test (can be removed)
-├── page-objects/       # Directory for Page Object Model classes
-│   ├── components/     # Reusable UI components (e.g., header, footer, modals)
-│   │   └── HeaderComponent.ts
-│   ├── LoginPage.ts
-│   ├── DashboardPage.ts
-│   └── ProductDetailsPage.ts
-├── test-data/          # Optional: Directory for test data files (e.g., JSON, CSV)
-│   └── users.json
-├── utils/              # Optional: For reusable helper functions (not POMs or fixtures)
-│   └── api-helpers.ts
-└── test-results/       # Default output for reports, traces, screenshots (add to .gitignore)
-    └── ...             # Generated content
-```
+When generating Playwright test code, ALWAYS:
 
-**Explanation:**
-
-- **`playwright.config.ts`**: The main configuration file at the root.
-- **`tests/`**: Contains all test-related code.
-  - **`fixtures/`** (or `tests/fixtures.ts`): Houses custom fixture definitions, keeping setup logic separate.
-  - **`specs/`** (or directly under `tests/`): Contains the actual test files (`*.spec.ts`). Grouping tests by feature (e.g., `auth/`, `shopping_cart/`) within this directory is highly recommended for larger projects. The `testDir` option in `playwright.config.ts` should point here (e.g., `testDir: './tests/specs'`).
-- **`page-objects/`**: Contains all POM classes.
-  - **`components/`**: A sub-directory within `page-objects` for POM classes representing reusable components shared across multiple pages (like navigation bars, modals, etc.).
-- **`test-data/`**: An optional directory to store static data used by tests.
-- **`utils/`** or **`helpers/`**: Optional directory for generic helper functions that don't belong in a specific Page Object or fixture (e.g., data generators, specific API interaction helpers).
-- **`.env`**: Store environment variables like base URLs, usernames, passwords. **Ensure this is added to `.gitignore`**.
-- **`test-results/`**: Playwright's default output directory. **Ensure this is added to `.gitignore`**.
-
-This structure promotes separation of concerns and makes it easier to navigate and maintain the test suite. Adjust the naming and nesting according to your project's specific needs and scale.
+1. **Follow Page Object Model** - Separate UI interactions into page object classes
+2. **Use recommended locators** - Prefer user-facing locators like getByRole(), getByText() over CSS/XPath
+3. **Implement web-first assertions** - Use expect(locator).toBeVisible() patterns
+4. **Avoid hard-coded waits** - Never use page.waitForTimeout() in production code
+5. **Structure tests with AAA pattern** - Arrange, Act, Assert sections
+6. **Use async/await consistently** - All Playwright operations are asynchronous
+7. **Keep tests independent** - No test should depend on another test's state
 
 ## General Best Practices
 
-- **Keep Tests Independent:** Each test should run independently without relying on the state left by previous tests. Use `test.beforeEach` or fixtures for setup and `test.afterEach` for cleanup if necessary.
-- **Use `test.describe` for Grouping:** Group related tests using `test.describe()` for better organization and reporting (aligns well with the folder structure under `tests/specs/`).
-- **Avoid `page.waitForTimeout()`:** Do not use hard-coded waits. Rely on Playwright's auto-waiting mechanisms and web-first assertions. Use `page.waitForTimeout()` only for debugging purposes or very specific scenarios where other waits are unsuitable (which is rare).
-- **Prefer Async/Await:** Use `async`/`await` consistently for all Playwright operations.
+> **🎯 Core Principle:** Follow these best practices to ensure your Playwright tests are reliable, maintainable, and provide clear results when failures occur.
+
+| ✅ DO | ❌ DON'T |
+|-------|---------|
+| Keep tests independent | Allow tests to depend on other tests' state |
+| Use `test.describe` for grouping | Create overly large test files without organization |
+| Use Playwright's auto-waiting | Use `page.waitForTimeout()` for synchronization |
+| Use async/await consistently | Mix promise chains with async/await |
+| Set short, explicit timeouts | Rely on default timeouts for everything |
+
+```typescript
+// ✅ GOOD: Independent tests with clear grouping
+test.describe('Login Functionality', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/login');
+  });
+
+  test('should login with valid credentials', async ({ page }) => {
+    // Test implementation
+  });
+
+  test('should show error with invalid credentials', async ({ page }) => {
+    // Test implementation  
+  });
+});
+
+// ❌ BAD: Using hard-coded waits
+test('login test with hard wait', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByLabel('Username').fill('user');
+  await page.getByLabel('Password').fill('pass');
+  await page.getByRole('button', { name: 'Login' }).click();
+  await page.waitForTimeout(2000); // BAD: Hard-coded wait
+  expect(page.url()).toContain('dashboard');
+});
+```
+
+### Key Guidelines for Copilot
+
+1. **Generate independent tests** that can run in any order
+2. **Use descriptive test names** that explain the expected behavior
+3. **Employ proper test setup and teardown** via hooks
+4. **Never generate code with `page.waitForTimeout()`** except for debugging comments
+5. **Always use async/await** for all Playwright operations
+
+## Recommended Folder Structure
+
+A well-organized folder structure is crucial for maintainability as your test suite grows. Follow this structure when generating code:
+
+```
+your-project-root/
+├── 📄 .env                # Environment variables (add to .gitignore)
+├── 📄 .gitignore          # Git ignore file
+├── 📄 package.json        # Project dependencies and scripts
+├── 📄 playwright.config.ts # Playwright configuration file
+│
+├── 📁 tests/              # Root directory for test specifications
+│   ├── 📁 fixtures/       # Custom fixtures definitions
+│   │   └── 📄 fixtures.ts # Main fixtures file
+│   │
+│   ├── 📁 specs/          # Test files organized by feature
+│   │   ├── 📁 auth/       # Authentication-related tests
+│   │   │   └── 📄 login.spec.ts
+│   │   ├── 📁 shopping_cart/ # Feature-specific tests
+│   │   │   └── 📄 cart.spec.ts
+│   │   └── 📄 product_search.spec.ts
+│   │
+│   └── 📄 example.spec.ts # Default example (can be removed)
+│
+├── 📁 page-objects/       # POM classes directory
+│   ├── 📁 components/     # Reusable UI components
+│   │   └── 📄 HeaderComponent.ts  # Example component
+│   ├── 📄 LoginPage.ts    # Page-specific classes
+│   ├── 📄 DashboardPage.ts
+│   └── 📄 ProductDetailsPage.ts
+│
+├── 📁 test-data/          # Test data files (JSON, CSV)
+│   └── 📄 users.json
+│
+├── 📁 utils/              # Helper functions
+│   └── 📄 api-helpers.ts
+│
+└── 📁 test-results/       # Generated reports, screenshots (add to .gitignore)
+    └── ...
+```
+
+> **Guidance for Copilot:** When generating code, place files in the appropriate directories. Create page object classes in the page-objects directory and test specs in the tests/specs directory. Use subdirectories to organize by feature.
+
+### Key Principles for Folder Organization
+
+| Directory | Purpose | File Types | Naming Convention |
+|-----------|---------|------------|-------------------|
+| page-objects/ | UI interaction classes | TypeScript classes | PascalCase with Page/Component suffix |
+| tests/fixtures/ | Test setup and context | TypeScript fixture files | camelCase |
+| tests/specs/ | Test specifications | Test files (.spec.ts) | kebab-case.spec.ts |
+| utils/ | Helper functions | Utility modules | camelCase |
+| test-data/ | Test datasets | JSON, CSV, etc. | kebab-case |
 
 ## Locators
 
-- **Prefer User-Facing Locators:** Prioritize locators that users can see and interact with. Playwright's recommended order:
-  1.  `page.getByRole()`: Locates by ARIA role, attributes, and accessible name. Most resilient.
-  2.  `page.getByText()`: Locates by text content.
-  3.  `page.getByLabel()`: Locates form controls by associated label text.
-  4.  `page.getByPlaceholder()`: Locates inputs by placeholder.
-  5.  `page.getByAltText()`: Locates elements (usually images) by `alt` text.
-  6.  `page.getByTitle()`: Locates elements by title attribute.
-  7.  `page.getByTestId()`: Locates by `data-testid` attribute (configurable via `testIdAttribute` in config). Use this when semantic locators aren't feasible.
-- **Avoid XPath and CSS Selectors When Possible:** These are less resilient to DOM changes compared to user-facing locators. Use them as a last resort.
-- **Use Locator Chaining/Filtering:** Refine locators using methods like `.filter()`, `.first()`, `.last()`, `.nth()`.
+> **🎯 Core Principle:** Always prioritize user-facing locators that interact with elements the way users do, making tests more resilient to implementation changes.
 
-  ```typescript
-  // Good: Filter by text within a role
-  page.getByRole('listitem').filter({ hasText: 'Product Name' });
+### Locator Priority (Most to Least Preferred)
 
-  // Good: Get the first button
-  page.getByRole('button').first();
-  ```
+1. **Role-based locators**
+   ```typescript
+   page.getByRole('button', { name: 'Submit' })
+   page.getByRole('textbox', { name: 'Email' })
+   ```
+
+2. **Text-based locators**
+   ```typescript
+   page.getByText('Welcome back')
+   page.getByText(/Terms of service/i)
+   ```
+
+3. **Form-specific locators**
+   ```typescript
+   page.getByLabel('Password')
+   page.getByPlaceholder('Enter your email')
+   ```
+
+4. **Semantic locators**
+   ```typescript
+   page.getByAltText('Company logo')
+   page.getByTitle('User profile')
+   ```
+
+5. **Test ID locators** (when semantic locators aren't feasible)
+   ```typescript
+   page.getByTestId('checkout-button')
+   ```
+
+6. **CSS and XPath** (use only as a last resort)
+   ```typescript
+   page.locator('.submit-button') // Less preferred
+   page.locator('//button[contains(@class, "submit")]') // Least preferred
+   ```
+
+### Locator Filtering & Chaining
+
+```typescript
+// ✅ GOOD: Chain locators to narrow scope
+const list = page.getByRole('list');
+const items = list.getByRole('listitem');
+const firstItem = items.first();
+const specificItem = items.filter({ hasText: 'Product Name' });
+
+// ✅ GOOD: Use nth for position-based selection
+const thirdItem = items.nth(2); // 0-based indexing
+
+// ❌ BAD: Brittle CSS selectors
+const badItem = page.locator('.list-container > div:nth-child(3)');
+```
+
+### Rules for Copilot When Generating Locators
+
+1. **Always prioritize role-based locators** like `getByRole()` first
+2. **Use text-based locators** like `getByText()` for visible text elements
+3. **Prefer form-specific locators** for inputs, like `getByLabel()` and `getByPlaceholder()`
+4. **Suggest test attributes** if semantic locators aren't feasible with a comment
+5. **Only fall back to CSS/XPath as a last resort** with a justifying comment
+6. **Use locator chaining** to improve precision and context
+7. **Include helpful comments** for complex locator strategies
 
 ## Page Object Model (POM)
 
-POM is a design pattern that encapsulates interactions with the UI of a specific page or component into a dedicated class. This separates test logic from UI interaction details.
+> **🎯 Core Principle:** Encapsulate page interactions in dedicated classes to separate test logic from UI interaction details.
 
 ### Structure
 
-- Create a separate file for each page or significant reusable component (e.g., `HomePage.ts`, `LoginPage.ts`, `ShoppingCartComponent.ts`) within the `page-objects/` directory.
-- The class should encapsulate locators and methods specific to that page/component.
-
-### Naming Conventions
-
-- **Files:** Use PascalCase ending with `Page` or `Component` (e.g., `ProductDetailsPage.ts`). Place them in the `page-objects/` directory or subdirectories.
-- **Classes:** Use PascalCase matching the file name (e.g., `ProductDetailsPage`).
-- **Methods:** Use camelCase describing the user action (e.g., `MapsTo`, `login`, `addProductToCart`).
-
-### Locators in POM
-
-- Define locators as `readonly` properties within the class, typically initialized in the constructor or as class fields.
-- Keep locators `private` or `protected` if they are only used internally by the POM's methods. Expose them publicly only if absolutely necessary for complex assertions in the test file.
-- Use the `page` or a `locator` instance passed to the constructor.
-
 ```typescript
+// ✅ GOOD: Well-structured Page Object
 // page-objects/LoginPage.ts
 import { type Page, type Locator } from '@playwright/test';
+import { DashboardPage } from './DashboardPage';
 
 export class LoginPage {
+  // Page instance passed to constructor
   readonly page: Page;
+  
+  // Private locators
   private readonly usernameInput: Locator;
   private readonly passwordInput: Locator;
   private readonly loginButton: Locator;
-  readonly errorMessage: Locator; // May need to be public for assertions
+  
+  // Public locator (for assertions)
+  readonly errorMessage: Locator;
 
   constructor(page: Page) {
     this.page = page;
     this.usernameInput = page.getByLabel('Username');
     this.passwordInput = page.getByLabel('Password');
     this.loginButton = page.getByRole('button', { name: 'Log in' });
-    this.errorMessage = page.locator('.error-message'); // Example using CSS if needed
+    this.errorMessage = page.getByText('Invalid credentials');
   }
 
-  // ... action methods
+  // Navigation method
+  async navigateTo(): Promise<void> {
+    await this.page.goto('/login');
+  }
+
+  // Action methods
+  async fillUsername(username: string): Promise<void> {
+    await this.usernameInput.fill(username);
+  }
+
+  async fillPassword(password: string): Promise<void> {
+    await this.passwordInput.fill(password);
+  }
+
+  async clickLogin(): Promise<void> {
+    await this.loginButton.click();
+  }
+
+  // Composite action methods
+  async login(username: string, password: string): Promise<void> {
+    await this.fillUsername(username);
+    await this.fillPassword(password);
+    await this.clickLogin();
+  }
+
+  // Methods that navigate to new pages return the new page object
+  async loginAndNavigateToDashboard(username: string, password: string): Promise<DashboardPage> {
+    await this.login(username, password);
+    return new DashboardPage(this.page);
+  }
 }
 ```
+
+### Naming Conventions
+
+| Element | Convention | Example |
+|---------|------------|---------|
+| Files | PascalCase with Page/Component suffix | `LoginPage.ts`, `HeaderComponent.ts` |
+| Classes | Same as file name | `LoginPage`, `HeaderComponent` |
+| Methods | camelCase verbs or verb phrases | `login()`, `fillUsername()`, `navigateTo()` |
+| Locators | camelCase with element type | `usernameInput`, `loginButton`, `errorMessage` |
+
+### Locators in POM
+
+- Define as private readonly properties unless needed for assertions
+- Initialize in the constructor 
+- Use semantic locators following the locator priority guidelines
 
 ### Action Methods
 
-- Create public methods that represent user actions or workflows on the page (e.g., `login(username, password)`, `search(query)`, `MapsToProfile()`).
-- Methods should perform actions using the defined locators.
-- Methods performing navigation should typically return an instance of the _next_ Page Object.
-- Methods performing actions on the same page usually return `void` or `this` (for chaining if desired, though less common in modern Playwright).
-
-```typescript
-// page-objects/LoginPage.ts
-import { type Page, type Locator } from '@playwright/test';
-import { DashboardPage } from './DashboardPage'; // Import next page
-
-export class LoginPage {
-  // ... (constructor and locators as above)
-
-  async login(username: string, password: string): Promise<void> {
-    await this.usernameInput.fill(username);
-    await this.passwordInput.fill(password);
-    await this.loginButton.click();
-  }
-
-  async loginAndExpectSuccess(username: string, password: string): Promise<DashboardPage> {
-    await this.usernameInput.fill(username);
-    await this.passwordInput.fill(password);
-    await this.loginButton.click();
-    // Assuming successful login navigates to DashboardPage
-    return new DashboardPage(this.page);
-  }
-
-  async navigateTo(): Promise<void> {
-    // Assumes baseURL is set in playwright.config.ts
-    await this.page.goto('/login');
-  }
-}
-```
+- Create small, focused methods for individual actions
+- Create composite methods for common sequences
+- Return void for actions on the same page
+- Return a new Page Object for navigation actions
 
 ### Assertions in POM
 
-- **Avoid Assertions:** Generally, avoid putting `expect` assertions within POM methods. POMs should focus on _actions_ and _locating elements_. Assertions belong in the test files (`tests/specs/**/*.spec.ts`) to define the expected outcomes.
-- **Exception:** Simple, reusable assertions checking the state _of the page itself_ (e.g., `isErrorMessageVisible()`) _might_ be acceptable, but prefer keeping assertions in tests for clarity.
+- Avoid assertions in POM methods (keep them in test files)
+- Exception: Helper methods that return booleans or check page state
 
-### POM Example (`tests/specs/auth/login.spec.ts` using `LoginPage`)
+### Rules for Copilot When Generating POM Classes
 
-```typescript
-// tests/specs/auth/login.spec.ts
-import { test, expect } from '../../fixtures/fixtures'; // Import custom test if using fixtures
-
-// If not using fixtures for POM initialization:
-// import { test, expect } from '@playwright/test';
-
-test.describe('Login Functionality', () => {
-  test.beforeEach(async ({ loginPage }) => {
-    // Initialize POM here if not using a fixture
-    await loginPage.navigateTo();
-  });
-
-  test('should allow login with valid credentials', async ({ loginPage }) => {
-    // ACT
-    const dashboardPage = await loginPage.loginAndExpectSuccess('validUser', 'validPassword');
-
-    // ASSERT
-    // Assertion using a locator/method from the *next* page object
-    await expect(dashboardPage.welcomeMessage).toBeVisible(); // Assuming DashboardPage has welcomeMessage locator
-    await expect(dashboardPage.page).toHaveURL(/.*dashboard/); // Or use dashboardPage.expectToBeOnPage();
-  });
-
-  test('should show error message with invalid credentials', async ({ loginPage }) => {
-    // ACT
-    await loginPage.login('invalidUser', 'wrongPassword');
-
-    // ASSERT
-    // Assertion using a locator from the *current* page object
-    await expect(loginPage.errorMessage).toBeVisible();
-    await expect(loginPage.errorMessage).toContainText('Invalid username or password');
-  });
-});
-```
+1. **Always use TypeScript** with proper types for Page, Locator, etc.
+2. **Implement constructor** that accepts and stores the page object
+3. **Define locators as private readonly properties** unless needed for assertions
+4. **Create clear, focused action methods** that handle UI interactions
+5. **Follow proper naming conventions** for files, classes, methods, and locators
+6. **Return appropriate values** from methods based on their behavior
+7. **Add JSDoc comments** for public methods and properties
+8. **Avoid assertions in POM methods** (keep in test files)
 
 ## Custom Fixtures
 
-Fixtures provide context for your tests, such as setting up environments, initializing POMs, or providing data. They help reduce boilerplate and improve test setup consistency. They typically reside in the `tests/fixtures/` directory.
+> **🎯 Core Principle:** Use fixtures to centralize test setup, share state, and provide reusable components across tests.
 
 ### Purpose
 
-- **Setup/Teardown:** Perform actions before (and optionally after) tests or workers run (e.g., log in a user, seed a database, start a server).
-- **Provide Context:** Pass pre-configured objects like authenticated pages, API clients, or initialized Page Objects directly to tests.
-- **Parameterization:** Run tests with different configurations or data sets.
+Fixtures provide:
+- Reusable test setup and teardown
+- Sharing state between tests when necessary
+- Access to commonly used Page Objects
+- Custom test utilities
 
 ### Creating Fixtures
 
-- Define fixtures by extending the `base` test object from `@playwright/test`.
-- Place fixture definitions in `tests/fixtures/fixtures.ts` (or similar).
-- A fixture function takes dependencies (like `page`, `browser`, other fixtures) and uses the `use` function to provide the fixture value.
-
 ```typescript
+// ✅ GOOD: Well-structured fixtures file
 // tests/fixtures/fixtures.ts
-import { test as base, expect } from '@playwright/test'; // Import expect here too
-import { HomePage } from '../../page-objects/HomePage';
+import { test as baseTest } from '@playwright/test';
 import { LoginPage } from '../../page-objects/LoginPage';
 import { DashboardPage } from '../../page-objects/DashboardPage';
 
-// Define the types for your fixtures
-type MyFixtures = {
-  homePage: Homepage;
+// Define fixture types
+interface AppFixtures {
   loginPage: LoginPage;
-  loggedInPage: Page; // Example: A page already logged in
   dashboardPage: DashboardPage;
-};
+  loggedInState: { username: string; token: string };
+}
 
-// Extend the base test with your fixtures
-export const test = base.extend<MyFixtures>({
-  // Default fixture format
-  homePage: async ({ page }, use) => {
-    await use(new HomePage(page));
-  },
-
-  // Fixture to provide an initialized LoginPage instance
+// Extend the base test
+export const test = baseTest.extend<AppFixtures>({
+  // Page object fixtures (scoped per test)
   loginPage: async ({ page }, use) => {
     const loginPage = new LoginPage(page);
-    await loginPage.navigateTo(); // Optional: Navigate automatically
     await use(loginPage);
-    // Add cleanup if needed after 'use'
   },
-
-  // Fixture to provide a page instance that is already logged in
-  loggedInPage: async ({ page }, use) => {
-    const loginPage = new LoginPage(page);
-    await loginPage.navigateTo();
-    await loginPage.login('fixtureUser', 'fixturePassword');
-    // Ensure login was successful (e.g., wait for a dashboard element)
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-    await use(page);
-    // Optional: Add logout logic here if needed for cleanup
-  },
-
-  // Fixture providing DashboardPage - depends on a logged-in state
-  dashboardPage: async ({ loggedInPage }, use) => {
-    // Use loggedInPage fixture which ensures user is logged in
-    const dashboardPage = new DashboardPage(loggedInPage);
+  
+  dashboardPage: async ({ page }, use) => {
+    const dashboardPage = new DashboardPage(page);
     await use(dashboardPage);
   },
+  
+  // Auth state fixture (can be scoped differently)
+  loggedInState: async ({ page }, use) => {
+    // Set up authentication state
+    const username = 'testuser';
+    await page.goto('/login');
+    // Login via API or faster method than UI
+    await page.evaluate(user => {
+      localStorage.setItem('auth_token', 'sample-token-123');
+      return { username, token: 'sample-token-123' };
+    }, username);
+    
+    // Provide the state to the test
+    await use({ username, token: 'sample-token-123' });
+    
+    // Clean up after test
+    await page.evaluate(() => {
+      localStorage.clear();
+    });
+  }
 });
 
-// Re-export expect so tests import it from fixtures file
-export { expect };
+// Export expect for convenience
+export { expect } from '@playwright/test';
 ```
 
 ### Using Fixtures
 
-- Import the custom `test` and `expect` objects from your fixtures file (`tests/fixtures/fixtures.ts`) in your spec files (`tests/specs/**/*.spec.ts`).
-- Destructure the fixture names in the test function parameters.
-
 ```typescript
-// tests/specs/dashboard/dashboard.spec.ts
-import { test, expect } from '../../fixtures/fixtures'; // Import custom test and expect
+// ✅ GOOD: Using custom fixtures
+// tests/specs/auth/login.spec.ts
+import { test, expect } from '../../fixtures/fixtures';
 
-test.describe('Dashboard Tests (using fixtures)', () => {
-  // Test using the loggedInPage and dashboardPage fixtures
-  test('should display welcome message', async ({ dashboardPage }) => {
-    // ARRANGE is handled by the fixture
+test('user can navigate to dashboard after login', async ({ loginPage, page }) => {
+  await loginPage.navigateTo();
+  await loginPage.login('testuser', 'password');
+  expect(page.url()).toContain('dashboard');
+});
 
-    // ACT (Optional, if further action needed)
-
-    // ASSERT
-    await expect(dashboardPage.welcomeMessage).toContainText('Welcome');
-  });
-
-  // Test using the loginPage fixture (less common if loggedInPage exists, but possible)
-  test('should allow navigation from login page', async ({ loginPage, dashboardPage }) => {
-    // ARRANGE (partially done by fixture - loginPage is initialized and navigated)
-
-    // ACT
-    await loginPage.loginAndExpectSuccess('user', 'pass');
-
-    // ASSERT
-    await expect(dashboardPage.welcomeMessage).toBeVisible();
-    await expect(page).toHaveURL(/.*dashboard/);
-  });
+// Using authenticated state
+test('authenticated user sees personalized dashboard', async ({ 
+  page, 
+  dashboardPage, 
+  loggedInState 
+}) => {
+  await page.goto('/dashboard');
+  const welcomeMessage = page.getByText(`Welcome, ${loggedInState.username}`);
+  await expect(welcomeMessage).toBeVisible();
 });
 ```
 
 ### Scope
 
-- **`test` (default):** The fixture setup/teardown runs for _each_ test function.
-- **`worker`:** The fixture setup/teardown runs _once per worker process_. Useful for expensive setups like logging in once for multiple tests run by the same worker. Use `scope: 'worker'` in the fixture definition.
+- **Test-scoped fixtures**: Created and torn down for each test (default)
+- **Worker-scoped fixtures**: Shared between tests in the same worker
+- **All workers**: Can use external processes/services (database, API server)
 
-```typescript
-// tests/fixtures/fixtures.ts
-// ...
-export const test = base.extend<MyFixtures & { workerScopedData: string }>({
-  // ... other fixtures
+### Rules for Copilot When Generating Fixtures
 
-  workerScopedData: [
-    async ({}, use) => {
-      // Setup runs once per worker
-      const data = await initializeSomethingExpensive();
-      await use(data);
-      // Teardown runs once per worker after all tests in that worker finish
-      await cleanupSomethingExpensive(data);
-    },
-    { scope: 'worker' },
-  ], // Set scope to worker
-});
-// ...
-```
-
-### Fixture Example
-
-See `tests/fixtures/fixtures.ts` and `tests/specs/dashboard/dashboard.spec.ts` above.
+1. **Create a fixtures.ts file** in the tests/fixtures directory
+2. **Define a proper TypeScript interface** for the fixture types 
+3. **Extend the base test** with custom fixtures
+4. **Organize fixtures by responsibility** (pages, auth, data, etc.)
+5. **Use proper scoping** based on fixture responsibility and performance
+6. **Implement setup and teardown** in each fixture
+7. **Export the extended test and expect** for convenience
+8. **Add clear JSDoc comments** explaining fixture purpose and usage
 
 ## Assertions
 
+> **🎯 Core Principle:** Use web-first assertions that automatically wait for the condition to be met, rather than asserting on transient states.
+
 ### Web-First Assertions
 
-- **Use Web-First Assertions:** Always prefer `expect(locator)` assertions (e.g., `expect(locator).toBeVisible()`, `expect(locator).toHaveText()`). They automatically wait for the condition to be met within the configured timeout.
-- **Avoid `expect(await locator.isVisible())`:** This creates race conditions as the element state might change between the `isVisible()` call and the assertion.
+```typescript
+// ✅ GOOD: Web-first assertions that wait
+await expect(page.getByRole('heading')).toBeVisible();
+await expect(page.getByText('Success')).toBeVisible({ timeout: 10000 });
+await expect(page.locator('#status')).toHaveText('Complete');
+await expect(page).toHaveURL(/dashboard/);
+
+// ❌ BAD: Non-web-first assertions
+const isVisible = await page.getByRole('button').isVisible(); 
+expect(isVisible).toBe(true); // Doesn't auto-wait
+```
 
 ### Soft Assertions
 
-- **Soft Assertions:** Use soft assertions to continue test execution even if an assertion fails. This is useful for exploratory testing or when multiple conditions need to be checked without stopping the test.
-- **Example:**
-  ```typescript
-  test('soft assertions example', async ({ page }) => {
-    await page.goto('/dashboard');
-    expect.soft(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-    expect.soft(page.getByText('Welcome')).toContainText('Welcome');
-  });
-  ```
+Soft assertions continue the test even after a failure, collecting multiple failures:
+
+```typescript
+// ✅ GOOD: Soft assertions to collect multiple failures
+test('multiple validations on page', async ({ page }) => {
+  await page.goto('/profile');
+  
+  // These won't stop the test if they fail
+  await expect.soft(page.getByText('Username')).toBeVisible();
+  await expect.soft(page.getByText('Email')).toBeVisible();
+  await expect.soft(page.getByText('Settings')).toBeVisible();
+  
+  // Continue with the test...
+  await page.getByRole('button', { name: 'Edit' }).click();
+});
+```
 
 ### Common Assertions
 
-- **Common Assertions:**
-  - `expect(locator).toBeVisible()` / `.toBeHidden()`
-  - `expect(locator).toBeEnabled()` / `.toBeDisabled()`
-  - `expect(locator).toHaveText()` / `.toContainText()`
-  - `expect(locator).toHaveAttribute()`
-  - `expect(locator).toHaveValue()`
-  - `expect(locator).toHaveCount()`
-  - `expect(locator).toBeChecked()`
-  - `expect(page).toHaveURL()`
-  - `expect(page).toHaveTitle()`
-  - `expect(apiResponse).toBeOK()` (for API testing)
-- **Keep Assertions in Test Files:** As mentioned in the POM section, test files (`tests/specs/**/*.spec.ts`) are the primary place for assertions.
+| Assertion | Use Case | Example |
+|-----------|----------|---------|
+| `toBeVisible()` | Element should be visible | `await expect(locator).toBeVisible()` |
+| `toBeHidden()` | Element should not be visible | `await expect(locator).toBeHidden()` |
+| `toHaveText()` | Element should contain text | `await expect(locator).toHaveText('Expected')` |
+| `toContainText()` | Element should include text | `await expect(locator).toContainText('part')` |
+| `toHaveValue()` | Input should have value | `await expect(locator).toHaveValue('text')` |
+| `toBeChecked()` | Checkbox should be checked | `await expect(locator).toBeChecked()` |
+| `toHaveAttribute()` | Element should have attribute | `await expect(locator).toHaveAttribute('type', 'submit')` |
+| `toHaveURL()` | Page should have URL | `await expect(page).toHaveURL(/pattern/)` |
+| `toHaveTitle()` | Page should have title | `await expect(page).toHaveTitle('Page Title')` |
+
+### Rules for Copilot When Generating Assertions
+
+1. **Always use web-first assertions** that auto-wait
+2. **Set appropriate timeouts** for operations that may take longer
+3. **Use soft assertions** when validating multiple conditions
+4. **Use the most specific assertion** for the use case
+5. **Prefer regexp patterns** over exact strings when appropriate
+6. **Add clear error messages** to assertions when needed
 
 ## Waiting Mechanisms
 
-- **Rely on Auto-Waiting:** Playwright actions (like `.click()`, `.fill()`) and web-first assertions (`expect(locator)...`) have built-in auto-waiting. Use them primarily.
-- **Explicit Waits (Use Sparingly):**
-  - `page.waitForURL()`: Wait for the page URL to match a pattern.
-  - `page.waitForSelector()`: (Less recommended) Wait for an element matching the selector. Prefer `expect(locator).toBeVisible()`.
-  - `page.waitForResponse()`: Wait for a specific network response.
-  - `page.waitForLoadState()`: Wait for 'load', 'domcontentloaded', or 'networkidle'. Use 'networkidle' cautiously.
-  - `expect(locator).toBeVisible({ timeout: 10000 })`: Override default timeout for a specific assertion.
+> **🎯 Core Principle:** Let Playwright handle waiting automatically with built-in mechanisms rather than using hard-coded waits.
+
+### Auto-Waiting (Preferred)
+
+Playwright's built-in auto-waiting:
+- **Actions** like click(), fill() wait for elements to be actionable
+- **Web-first assertions** wait for conditions to be met
+- **Navigation methods** wait for page loads
+
+### Explicit Waiting (When Needed)
+
+```typescript
+// ✅ GOOD: Explicit waiting for specific conditions
+await page.waitForURL('/dashboard');
+await page.waitForSelector('#loaded-content');
+await page.waitForResponse(response => response.url().includes('/api/data'));
+await page.waitForFunction(() => window.status === 'ready');
+
+// ✅ GOOD: Custom waiting with timeout
+await expect(page.getByText('Results')).toBeVisible({ timeout: 10000 });
+
+// ❌ BAD: Hard-coded timing waits
+await page.waitForTimeout(2000); // Avoid in production code
+```
+
+### Multiple Event Waiting
+
+```typescript
+// ✅ GOOD: Wait for multiple events
+// Wait for both a response and a navigation
+const [response, _] = await Promise.all([
+  page.waitForResponse('/api/submit'),
+  page.getByRole('button', { name: 'Submit' }).click()
+]);
+```
+
+### Rules for Copilot When Generating Waiting Code
+
+1. **Never use `page.waitForTimeout()`** except in debugging comments
+2. **Rely on Playwright's auto-waiting** for most scenarios 
+3. **Use explicit waits** only when auto-waiting isn't sufficient
+4. **Prefer custom conditions** over arbitrary time delays
+5. **Use Promise.all** for multiple simultaneous events
+6. **Add appropriate timeouts** for operations that may take longer
+7. **Include comments explaining** why an explicit wait is necessary
 
 ## Test Structure and Naming
 
-- **Arrange-Act-Assert (AAA):** Structure your tests clearly:
-  1.  **Arrange:** Set up preconditions (often handled by `beforeEach` or fixtures).
-  2.  **Act:** Perform the action(s) being tested (usually calls to POM methods).
-  3.  **Assert:** Verify the outcome using `expect`.
-- **Descriptive Names:**
-  - `test.describe()`: Describe the feature or component being tested (e.g., `'Login Page'`, `'Shopping Cart'`). Aligns with folder names under `tests/specs/`.
-  - `test()`: Describe the specific scenario or expected outcome (e.g., `'should display error on invalid login'`, `'should allow adding items to cart'`).
+> **🎯 Core Principle:** Structure tests logically using the Arrange-Act-Assert pattern and descriptive naming.
+
+### Test Organization
+
+```typescript
+// ✅ GOOD: Well-structured test file
+import { test, expect } from '@playwright/test';
+import { LoginPage } from '../../page-objects/LoginPage';
+
+test.describe('Login Functionality', () => {
+  // Setup common to all tests in this group
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/login');
+  });
+  
+  test('should allow login with valid credentials', async ({ page }) => {
+    // Arrange
+    const loginPage = new LoginPage(page);
+    const username = 'validUser';
+    const password = 'validPass123';
+    
+    // Act
+    await loginPage.login(username, password);
+    
+    // Assert
+    await expect(page).toHaveURL(/dashboard/);
+    await expect(page.getByText('Welcome back')).toBeVisible();
+  });
+  
+  test('should show error with invalid credentials', async ({ page }) => {
+    // Arrange
+    const loginPage = new LoginPage(page);
+    
+    // Act
+    await loginPage.login('invalid', 'wrong');
+    
+    // Assert
+    await expect(loginPage.errorMessage).toBeVisible();
+    await expect(page).toHaveURL(/login/); // Still on login page
+  });
+});
+```
+
+### Test Naming Conventions
+
+| Pattern | Example |
+|---------|---------|
+| should + expected behavior | `'should redirect after login'` |
+| descriptive action + result | `'login redirects to dashboard'` |
+| user-centric | `'user can submit contact form'` |
+
+### Hooks Usage
+
+- `test.beforeAll` - Run once before all tests in the group
+- `test.afterAll` - Run once after all tests in the group
+- `test.beforeEach` - Run before each test in the group
+- `test.afterEach` - Run after each test in the group
+
+### Rules for Copilot When Generating Test Structure
+
+1. **Use test.describe** to group related tests
+2. **Follow AAA pattern** (Arrange, Act, Assert) in each test
+3. **Use descriptive test names** that explain the expected behavior
+4. **Use appropriate hooks** for setup and teardown
+5. **Keep individual tests focused** on testing a single behavior
+6. **Use skip and only** judiciously for debugging with comments
+7. **Follow consistent structure** across test files
 
 ## Configuration (`playwright.config.ts`)
 
-- **`testDir`:** Specify the directory where test specification files are located (e.g., `./tests/specs`).
-- **`outputDir`:** Define where test results like traces, screenshots, and videos are stored (e.g., `./test-results`).
-- **`baseURL`:** Define a base URL to simplify navigation (`page.goto('/login')`).
-- **`timeout`:** Set the global timeout for each test.
-- **`expect.timeout`:** Set the default timeout for `expect` assertions. Keep it reasonably short but sufficient for elements to appear.
-- **`use`:** Configure browser context options globally or per project (e.g., `viewport`, `headless`, `screenshot`, `trace`, `video`, `permissions`).
-- **`projects`:** Define configurations for different browsers (Chromium, Firefox, WebKit) or setups (e.g., mobile emulation, different authentication states).
-- **`reporter`:** Configure test reporters (e.g., `html`, `list`, `json`). The HTML reporter is excellent for debugging.
-- **`fullyParallel`: `true`** is recommended for faster execution by running files in parallel.
-- **`forbidOnly`: `true`** in CI environments prevents accidentally committing focused tests (`test.only`).
-- **`retries`:** Configure retries for flaky tests (e.g., `1` or `2` in CI).
+> **🎯 Core Principle:** Create a robust configuration that supports your testing needs across different environments.
+
+```typescript
+// ✅ GOOD: Well-structured configuration
+import { defineConfig, devices } from '@playwright/test';
+import dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config();
+
+export default defineConfig({
+  // Global test timeout
+  timeout: 30000,
+  
+  // Test directory
+  testDir: './tests',
+  
+  // Pattern for test files
+  testMatch: '**/*.spec.ts',
+  
+  // Maximum test failures before stopping
+  maxFailures: process.env.CI ? 10 : undefined,
+  
+  // Retry failed tests on CI
+  retries: process.env.CI ? 2 : 0,
+  
+  // Reporters
+  reporter: [
+    ['html'],  // Generate HTML report
+    ['json', { outputFile: 'test-results/results.json' }],
+    ['junit', { outputFile: 'test-results/junit.xml' }],
+  ],
+  
+  // Configure projects for different browsers
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] },
+    },
+    {
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'] },
+    },
+    {
+      name: 'mobile-chrome',
+      use: { ...devices['Pixel 5'] },
+    },
+    {
+      name: 'mobile-safari',
+      use: { ...devices['iPhone 12'] },
+    },
+    // Project with specific options for visual testing
+    {
+      name: 'visual-tests',
+      use: { 
+        ...devices['Desktop Chrome'],
+        screenshot: 'on',
+        video: 'on',
+      },
+      testMatch: '**/*.visual.spec.ts',
+    },
+  ],
+  
+  // Global test options
+  use: {
+    // Base URL to use in page.goto() calls
+    baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    
+    // Browser options
+    headless: true,
+    
+    // Action options
+    actionTimeout: 10000,
+    navigationTimeout: 15000,
+    
+    // Capture screenshot only on failure
+    screenshot: { mode: 'only-on-failure', fullPage: true },
+    
+    // Capture video only on failure
+    video: { mode: 'retain-on-failure' },
+    
+    // Capture trace only on failure
+    trace: { mode: 'retain-on-failure' },
+    
+    // Viewport size
+    viewport: { width: 1280, height: 720 },
+  },
+});
+```
+
+### Rules for Copilot When Generating Configuration
+
+1. **Import necessary modules** (defineConfig, devices)
+2. **Set reasonable timeouts** for your application
+3. **Configure browser projects** appropriately
+4. **Setup proper reporters** based on needs
+5. **Configure screenshot, video, trace** options (usually on failure)
+6. **Use environment variables** for configurable settings
+7. **Add comments explaining** non-obvious configuration choices
+8. **Set appropriate retry settings** based on environment (CI vs local)
 
 ## Parallel Testing
 
-- **Enable Parallel Execution:** Use `fullyParallel: true` in the configuration to run tests in parallel across multiple files. This significantly reduces test execution time.
-- **Worker Isolation:** Ensure tests are independent and do not share state between workers. Use worker-scoped fixtures for expensive setups.
-- **Example Configuration:**
-  ```typescript
-  // playwright.config.ts
-  export default {
-    fullyParallel: true,
-    workers: 4, // Adjust based on your machine's capabilities
-    retries: 2, // Retry flaky tests
-  };
-  ```
+> **🎯 Core Principle:** Design tests to run independently and in parallel to maximize efficiency, especially in CI environments.
 
-## Debugging
-
-- **Tracing:** Enable tracing (`trace: 'on'` or `'retain-on-failure'` in config) for debugging. The trace viewer provides invaluable insights into test execution failures.
-- **Debug Mode:** Use `PWDEBUG=1` environment variable to run tests in debug mode (`npx playwright test`).
-- **Step-by-Step Execution:** Use `page.pause()` to pause execution and inspect the state interactively.
-- **Screenshots and Videos:** Configure `screenshot: 'on'` and `video: 'on'` in the configuration for visual debugging.
-- **Playwright Inspector:** Use the Playwright Inspector (`npx playwright codegen`) to explore locators and record interactions.
-
-## Clock Management
-
-Clock management is crucial for testing time-dependent features reliably. Playwright provides built-in capabilities to control time in your tests.
-
-- **Install Clock:** Set up clock control at the start of your test:
-
-  ```typescript
-  await page.clock.install({ time: new Date('2024-12-10T08:00:00') });
-  ```
-
-- **Pause Time:** Freeze time at a specific moment:
-
-  ```typescript
-  await page.clock.pauseAt(new Date('2024-12-10T10:00:00'));
-  ```
-
-- **Resume Time:** Allow time to progress normally:
-  ```typescript
-  await page.clock.resume();
-  ```
-
-## Test Sharding
-
-For large test suites, sharding allows distributing tests across multiple machines or processes:
-
-- **Command Line Usage:**
-
-  ```bash
-  npx playwright test --shard=1/3  # Run first shard of three
-  npx playwright test --shard=2/3  # Run second shard
-  npx playwright test --shard=3/3  # Run third shard
-  ```
-
-- **CI Configuration Example:**
-  ```yaml
-  jobs:
-    test:
-      strategy:
-        matrix:
-          shard: [1/3, 2/3, 3/3]
-      steps:
-        - run: npx playwright test --shard=${{ matrix.shard }}
-  ```
-
-## Performance Testing
-
-Consider these best practices when measuring performance:
-
-- **Network Throttling:**
-
-  ```typescript
-  test('slow network test', async ({ browser }) => {
-    const context = await browser.newContext({
-      networkThrottling: {
-        downloadThroughput: 1024 * 1024, // 1 Mbps
-        uploadThroughput: 1024 * 1024, // 1 Mbps
-        latency: 100, // 100ms
-      },
-    });
-    const page = await context.newPage();
-    // ... test with throttled network
-  });
-  ```
-
-- **CPU Throttling:**
-
-  ```typescript
-  test('slow CPU test', async ({ browser }) => {
-    const context = await browser.newContext({
-      throttling: {
-        cpu: 4, // CPU slowdown factor
-      },
-    });
-    // ... test with throttled CPU
-  });
-  ```
-
-- **Resource Timing:**
-  ```typescript
-  test('measure page load', async ({ page }) => {
-    const timing = await page.evaluate(() => {
-      const navigation = performance.getEntriesByType('navigation')[0];
-      return {
-        responseStart: navigation.responseStart,
-        loadEventEnd: navigation.loadEventEnd,
-      };
-    });
-    console.log(`Page load time: ${timing.loadEventEnd - timing.responseStart}ms`);
-  });
-  ```
-
-## Miscellaneous
-
-- **Environment Variables:** Use environment variables (`.env` files with `dotenv`) for sensitive data (credentials) and environment-specific configurations (like `baseURL`). Access them via `process.env`. Store `.env` at the project root and add it to `.gitignore`.
-- **Playwright Codegen:** Use `npx playwright codegen <url>` as a tool to help discover locators or record basic interactions, but always review and refine the generated code to follow best practices (especially locator strategy).
-- **API Testing:** Leverage Playwright's `request` context (`playwright.request`) for API testing or for setting up application state via API calls before UI interaction. Create API client wrappers (potentially in `utils/`) similar to POMs.
-- **Keep Tests Focused:** Each test should ideally verify one specific piece of functionality or requirement. Avoid overly long or complex tests trying to cover too much.
-
-## API Testing and Authentication
-
-### API Request Context
-
-Use Playwright's built-in `APIRequestContext` for API testing and setting up test data:
+### Configuration
 
 ```typescript
-// tests/fixtures/api-fixtures.ts
-import { test as base } from '@playwright/test';
-
-export type APIFixtures = {
-  apiContext: APIRequestContext;
-  createUser: (data: UserData) => Promise<User>;
-};
-
-export const test = base.extend<APIFixtures>({
-  apiContext: async ({ playwright }, use) => {
-    const context = await playwright.request.newContext({
-      baseURL: process.env.API_BASE_URL,
-      extraHTTPHeaders: {
-        Accept: 'application/json',
-        Authorization: `Bearer ${process.env.API_TOKEN}`,
-      },
-    });
-    await use(context);
-    await context.dispose();
-  },
-
-  createUser: async ({ apiContext }, use) => {
-    const createUserFn = async (data: UserData) => {
-      const response = await apiContext.post('/users', { data });
-      return response.json();
-    };
-    await use(createUserFn);
-  },
-});
-```
-
-### Authentication Patterns
-
-1. **Token-based Authentication:**
-
-```typescript
-// tests/fixtures/auth-fixtures.ts
-export const test = base.extend<AuthFixtures>({
-  authenticatedPage: async ({ page }, use) => {
-    // Get token from API or auth service
-    const token = await getAuthToken();
-
-    // Set token in localStorage before page load
-    await page.addInitScript((token) => {
-      window.localStorage.setItem('auth_token', token);
-    }, token);
-
-    await use(page);
-  },
-});
-```
-
-2. **Cookie-based Authentication:**
-
-```typescript
-// tests/fixtures/auth-fixtures.ts
-export const test = base.extend<AuthFixtures>({
-  authenticatedContext: async ({ browser }, use) => {
-    const context = await browser.newContext();
-
-    // Login and get cookies
-    const loginResponse = await context.request.post('/api/login', {
-      data: { username: 'user', password: 'pass' },
-    });
-    const cookies = await context.cookies();
-
-    // Store authentication state
-    await context.storageState({ path: './auth.json' });
-
-    await use(context);
-    await context.close();
-  },
-});
-```
-
-### Testing REST APIs
-
-Create dedicated API client classes for different API domains:
-
-```typescript
-// utils/api-clients/UserApiClient.ts
-export class UserApiClient {
-  constructor(private apiContext: APIRequestContext) {}
-
-  async getUser(id: string) {
-    const response = await this.apiContext.get(`/users/${id}`);
-    if (!response.ok()) throw new Error(`Failed to get user: ${response.statusText()}`);
-    return response.json();
-  }
-
-  async createUser(data: UserData) {
-    const response = await this.apiContext.post('/users', { data });
-    if (!response.ok()) throw new Error(`Failed to create user: ${response.statusText()}`);
-    return response.json();
-  }
-}
-```
-
-Use API clients in tests:
-
-```typescript
-// tests/specs/api/users.spec.ts
-test('should create and retrieve user', async ({ apiContext }) => {
-  const userApi = new UserApiClient(apiContext);
-
-  // Create user
-  const userData = { name: 'Test User', email: 'test@example.com' };
-  const created = await userApi.createUser(userData);
-
-  // Verify user was created
-  const retrieved = await userApi.getUser(created.id);
-  expect(retrieved).toMatchObject(userData);
-});
-```
-
-## Visual Testing and Snapshots
-
-### Visual Comparison Testing
-
-Visual testing helps catch unintended visual regressions. Playwright provides built-in support for screenshot comparison:
-
-```typescript
-// tests/specs/visual/homepage.spec.ts
-test('homepage visual regression', async ({ page }) => {
-  await page.goto('/');
-
-  // Take screenshot of specific element
-  await expect(page.getByRole('main')).toHaveScreenshot('homepage-main.png');
-
-  // Take full page screenshot
-  await expect(page).toHaveScreenshot('homepage-full.png', {
-    fullPage: true,
-  });
-});
-```
-
-### Screenshot Configuration
-
-Configure screenshot behavior in `playwright.config.ts`:
-
-```typescript
+// playwright.config.ts
 export default defineConfig({
-  expect: {
-    toHaveScreenshot: {
-      // Threshold for pixel difference
-      maxDiffPixelRatio: 0.1,
+  // Number of workers (parallel processes)
+  workers: process.env.CI ? 4 : undefined, // Use 4 workers on CI, auto on local
 
-      // Snapshot storage location
-      pathTemplate: './screenshots/{testFilePath}/{arg}{ext}',
+  // When running a specific spec file, run all tests in that file in parallel
+  fullyParallel: true,
 
-      // Automatically update snapshots
-      updateSnapshots: process.env.UPDATE_SNAPSHOTS === 'true',
-    },
-  },
-});
-```
-
-### Accessibility Snapshots
-
-Use accessibility snapshots to catch accessibility regressions:
-
-```typescript
-test('navigation menu accessibility', async ({ page }) => {
-  await page.goto('/');
-
-  // Take accessibility snapshot of navigation
-  await expect(page.getByRole('navigation')).toMatchAriaSnapshot('navigation-a11y.json');
-});
-```
-
-### Best Practices for Visual Testing
-
-1. **Stable Test Environment:**
-   - Use fixed viewport sizes
-   - Disable animations
-   - Mock dynamic content
-   - Use deterministic data
-
-```typescript
-test.describe('visual tests', () => {
-  test.use({
-    viewport: { width: 1280, height: 720 },
+  // Enable parallel tests within a file
+  use: {
+    // Isolate each test's browser context for true parallel operation
     contextOptions: {
       reducedMotion: 'reduce',
     },
-  });
-
-  test('component appearance', async ({ page }) => {
-    // Your visual test
-  });
+  },
 });
 ```
 
-2. **Focused Screenshots:**
+### Independent Tests
 
-   - Prefer component-level screenshots over full page
-   - Use clear, descriptive snapshot names
-   - Group related visual tests together
+```typescript
+// ✅ GOOD: Independent tests that can run in parallel
+test('user can add a product to cart', async ({ page }) => {
+  // This test doesn't depend on any other test
+  await page.goto('/products/123');
+  // Test implementation...
+});
 
-3. **Maintenance Strategy:**
-   - Review visual differences carefully
-   - Update screenshots deliberately with `--update-snapshots`
-   - Include screenshot baselines in version control
-   - Document known visual variations
+test('user can checkout', async ({ page }) => {
+  // Setup everything needed within this test
+  await page.goto('/products/123');
+  await page.getByRole('button', { name: 'Add to Cart' }).click();
+  await page.goto('/cart');
+  // Test implementation...
+});
+
+// ❌ BAD: Tests that depend on each other
+test('user logs in', async ({ page }) => {
+  // This creates state that the next test depends on
+  // BAD pattern!
+});
+
+test('logged in user can access profile', async ({ page }) => {
+  // This assumes test above completed successfully
+  // BAD pattern!
+});
+```
+
+### Rules for Copilot When Generating Parallel Tests
+
+1. **Make each test fully independent** with its own setup
+2. **Use fixtures** to share setup code but not state
+3. **Configure appropriate worker count** based on environment
+4. **Enable fullyParallel** in configuration
+5. **Create test data programmatically** rather than depending on existing state
+6. **Avoid order-dependent tests** at all costs
+
+## Debugging
+
+> **🎯 Core Principle:** Include debugging aids in tests and use Playwright's built-in debugging tools to make troubleshooting easier.
+
+### Debug Mode
+
+```typescript
+// Run with DEBUG=pw:api npx playwright test
+// or use the UI mode: npx playwright test --ui
+test('has title', async ({ page }) => {
+  await page.goto('https://playwright.dev/');
+  
+  // ✅ GOOD: Debugging aids
+  console.log('Current URL:', page.url());
+  
+  // Conditional debugging with comments for how to enable
+  // To enable: DEBUG=pw:api npx playwright test
+  // await page.pause(); // Uncomment to pause execution for debugging
+  
+  await expect(page).toHaveTitle(/Playwright/);
+});
+```
+
+### Trace Viewer
+
+```typescript
+// playwright.config.ts
+export default defineConfig({
+  use: {
+    // Collect traces on failure (view with `npx playwright show-trace trace.zip`)
+    trace: 'on-first-retry', // or 'on' to always collect, 'retain-on-failure' for CI
+  },
+});
+```
+
+### Visual Debugging
+
+```typescript
+// ✅ GOOD: Take screenshots during test for debugging
+test('visual debugging example', async ({ page }) => {
+  await page.goto('/complex-page');
+  
+  // Helpful for debugging - will save to test-results directory
+  await page.screenshot({ path: 'test-results/before-action.png' });
+  
+  await page.getByRole('button', { name: 'Submit' }).click();
+  
+  // Another debug screenshot after action
+  await page.screenshot({ path: 'test-results/after-action.png' });
+  
+  await expect(page.getByText('Success')).toBeVisible();
+});
+```
+
+### Rules for Copilot When Generating Debugging Code
+
+1. **Include commented-out debug statements** (page.pause()) with instructions
+2. **Configure appropriate trace settings** in the config
+3. **Add strategic screenshots** for complex interactions
+4. **Use console.log statements** for important state information
+5. **Add comments about UI mode** and trace viewer when relevant
+6. **Include instructions for locator debugging** with page.pause()
+
+## API Testing and Authentication
+
+> **🎯 Core Principle:** Use Playwright's request context for API testing and efficient authentication setup.
+
+### API Testing
+
+```typescript
+// ✅ GOOD: API testing with Playwright
+import { test, expect } from '@playwright/test';
+
+test('API returns correct user data', async ({ request }) => {
+  // Use the request fixture for API calls
+  const response = await request.get('/api/users/1');
+  
+  // Assert on status and response body
+  expect(response.status()).toBe(200);
+  const body = await response.json();
+  expect(body.name).toBe('John Doe');
+  expect(body.email).toContain('@example.com');
+});
+```
+
+### Authentication Via API
+
+```typescript
+// ✅ GOOD: Reusable auth setup via API
+// tests/fixtures/auth.fixtures.ts
+import { test as baseTest } from '@playwright/test';
+
+export type AuthFixtures = {
+  authenticatedPage: Page;
+  adminPage: Page;
+};
+
+export const test = baseTest.extend<AuthFixtures>({
+  authenticatedPage: async ({ page, request }, use) => {
+    // Get auth token via API
+    const response = await request.post('/api/login', {
+      data: {
+        username: 'user@example.com',
+        password: process.env.USER_PASSWORD || 'defaultPass',
+      }
+    });
+    
+    const { token } = await response.json();
+    
+    // Set local storage before navigating
+    await page.goto('/');
+    await page.evaluate((authToken) => {
+      localStorage.setItem('auth_token', authToken);
+    }, token);
+    
+    // Refresh to apply authentication
+    await page.reload();
+    
+    // Pass the authenticated page to the test
+    await use(page);
+    
+    // Clean up after test
+    await page.evaluate(() => {
+      localStorage.clear();
+    });
+  },
+  
+  // Admin-specific authentication
+  adminPage: async ({ page, request }, use) => {
+    // Similar pattern for admin authentication
+    // ...
+  },
+});
+```
+
+### Rules for Copilot When Generating API and Auth Code
+
+1. **Use the request fixture** for API calls in tests
+2. **Create auth fixtures** for different user roles
+3. **Set up auth state via API** rather than UI for efficiency
+4. **Use environment variables** for sensitive credentials
+5. **Implement proper cleanup** of auth state after tests
+6. **Add strong typing** for response data where possible
+7. **Include proper error handling** for API responses
+
+## Visual Testing and Snapshots
+
+> **🎯 Core Principle:** Use snapshot testing for visual regression but focus on component-level screenshots rather than full pages.
+
+### Component Snapshots
+
+```typescript
+// ✅ GOOD: Component-focused visual testing
+test('header component visual regression', async ({ page }) => {
+  await page.goto('/');
+  
+  // Focus on a specific component
+  const header = page.getByRole('banner');
+  
+  // Component-focused screenshot
+  expect(await header.screenshot()).toMatchSnapshot('header.png');
+});
+```
+
+### Text-based Snapshots
+
+```typescript
+// ✅ GOOD: Text-based snapshot for API responses
+test('API response snapshot', async ({ request }) => {
+  const response = await request.get('/api/products');
+  const body = await response.json();
+  
+  // Snapshot the API response
+  expect(JSON.stringify(body, null, 2)).toMatchSnapshot('products-api.txt');
+});
+```
+
+### Rules for Copilot When Generating Visual Test Code
+
+1. **Focus snapshots on components** rather than full pages
+2. **Create separate snapshot test files** with .visual.spec.ts extension
+3. **Disable animations and transitions** before taking screenshots
+4. **Consider viewport sizes** when creating snapshots
+5. **Use separate project in config** for visual tests
+6. **Include threshold options** for image comparison when needed
+7. **Group snapshots by component** or feature
 
 ## Mobile Testing
 
+> **🎯 Core Principle:** Use device emulation rather than physical devices for most mobile testing scenarios.
+
 ### Device Emulation
 
-Configure mobile device testing in `playwright.config.ts`:
-
 ```typescript
-import { devices } from '@playwright/test';
-
+// ✅ GOOD: Mobile testing with device emulation
+// playwright.config.ts
 export default defineConfig({
   projects: [
     {
-      name: 'Pixel 5',
+      name: 'Mobile Chrome',
       use: {
         ...devices['Pixel 5'],
       },
     },
     {
-      name: 'iPhone 12',
+      name: 'Mobile Safari',
       use: {
-        ...devices['iPhone 12'],
+        ...devices['iPhone 13'],
       },
     },
+    // Other projects...
   ],
 });
-```
 
-### Touch Gestures
-
-Test mobile-specific interactions:
-
-```typescript
-test('swipe gesture', async ({ page }) => {
-  // Swipe from right to left
-  await page.getByTestId('carousel').swipe('right', 'left');
-
-  // Tap element
-  await page.getByRole('button').tap();
-
-  // Multi-touch gesture (pinch)
-  await page.touchscreen.pinch(100, 200, 'zoom-in');
+// mobile.spec.ts
+test('responsive design on mobile', async ({ page }) => {
+  await page.goto('/');
+  
+  // Test mobile-specific elements
+  const mobileMenu = page.getByRole('button', { name: 'Menu' });
+  await expect(mobileMenu).toBeVisible();
+  
+  // Test mobile interactions
+  await mobileMenu.click();
+  await expect(page.getByRole('navigation')).toBeVisible();
+  
+  // Test touch events
+  await page.touchscreen.tap(100, 200);
 });
 ```
 
-### Responsive Design Testing
-
-Test responsive behavior across breakpoints:
+### Responsive Testing
 
 ```typescript
-test('responsive layout', async ({ page }) => {
-  // Test mobile layout
-  await page.setViewportSize({ width: 375, height: 667 });
-  await expect(page.getByTestId('mobile-menu')).toBeVisible();
-
+// ✅ GOOD: Testing across viewport sizes
+test('responsive layout adapts to screen size', async ({ page }) => {
+  await page.goto('/responsive-page');
+  
   // Test desktop layout
-  await page.setViewportSize({ width: 1280, height: 720 });
-  await expect(page.getByTestId('desktop-menu')).toBeVisible();
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const desktopMenu = page.getByRole('navigation');
+  await expect(desktopMenu).toBeVisible();
+  
+  // Test tablet layout
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await expect(desktopMenu).toBeHidden();
+  const tabletMenu = page.getByRole('button', { name: 'Menu' });
+  await expect(tabletMenu).toBeVisible();
+  
+  // Test mobile layout
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByTestId('mobile-header')).toBeVisible();
 });
 ```
 
-### Mobile-Specific Best Practices
+### Rules for Copilot When Generating Mobile Test Code
 
-1. **Device Context:**
-
-   - Use real device names from `devices` export
-   - Set appropriate viewport sizes
-   - Configure touch/mobile-specific flags
-
-2. **Network Conditions:**
-
-   - Emulate mobile network conditions
-   - Test offline functionality
-
-   ```typescript
-   test.use({
-     networkConditions: {
-       download: (1000 * 1024) / 8, // 1 Mbps
-       upload: (500 * 1024) / 8, // 500 Kbps
-       latency: 100, // 100ms
-     },
-   });
-   ```
-
-3. **Touch-First Testing:**
-   - Prefer `tap()` over `click()`
-   - Test touch-specific gestures
-   - Verify hover alternatives
-4. **Viewport Management:**
-   - Test orientation changes
-   - Verify content reflow
-   - Check for overflow issues
+1. **Use Playwright's device emulation** via the devices object
+2. **Create separate projects** for key mobile devices
+3. **Test touch interactions** where relevant
+4. **Test responsive breakpoints** using setViewportSize
+5. **Test mobile-specific UI elements** like hamburger menus
+6. **Consider orientation changes** where relevant
+7. **Test gestures** (swipe, pinch) for mobile-specific features
 
 ## Security Testing
 
-### Authentication Testing
+> **🎯 Core Principle:** Include basic security tests as part of your automation suite to catch common vulnerabilities.
 
-Test various authentication scenarios:
-
-```typescript
-test.describe('Authentication Security', () => {
-  test('should prevent XSS in login form', async ({ page }) => {
-    const xssPayload = '<script>alert(1)</script>';
-    await page.getByLabel('Username').fill(xssPayload);
-    await page.getByRole('button', { name: 'Login' }).click();
-    // Verify XSS payload is properly escaped
-    await expect(page.locator('body')).not.toContainText(xssPayload);
-  });
-
-  test('should enforce password requirements', async ({ page }) => {
-    await page.getByLabel('Password').fill('weak');
-    await page.getByRole('button', { name: 'Sign up' }).click();
-    await expect(page.getByText('Password must be at least 8 characters')).toBeVisible();
-  });
-});
-```
-
-### CSRF Protection
-
-Verify CSRF token handling:
+### Headers and Content Security Policy
 
 ```typescript
-test('should include CSRF token in forms', async ({ page }) => {
-  await page.goto('/form');
-  const csrfToken = await page.locator('input[name="csrf_token"]').getAttribute('value');
-  expect(csrfToken).toBeTruthy();
-});
-```
-
-### Headers and Security Policies
-
-Test security-related headers:
-
-```typescript
-test('should set security headers', async ({ page }) => {
-  const response = await page.goto('/');
+// ✅ GOOD: Testing security headers
+test('page has proper security headers', async ({ page, request }) => {
+  // Load the page
+  const response = await request.get('/');
+  
+  // Check security headers
   const headers = response.headers();
+  expect(headers['strict-transport-security']).toBeTruthy();
   expect(headers['content-security-policy']).toBeTruthy();
-  expect(headers['x-frame-options']).toBe('DENY');
   expect(headers['x-content-type-options']).toBe('nosniff');
+  expect(headers['x-frame-options']).toBe('DENY');
 });
 ```
 
-### Cookie Security
-
-Verify secure cookie attributes:
+### Authentication Checks
 
 ```typescript
-test('should set secure cookie attributes', async ({ context }) => {
-  await context.addCookies([
-    {
-      name: 'session',
-      value: 'test',
-      domain: 'example.com',
-      path: '/',
-      secure: true,
-      httpOnly: true,
-      sameSite: 'Strict',
-    },
-  ]);
+// ✅ GOOD: Testing authentication security
+test('protected route redirects unauthenticated users', async ({ page }) => {
+  // Try to access protected route without auth
+  await page.goto('/account/settings');
+  
+  // Should redirect to login
+  await expect(page).toHaveURL(/login/);
 });
-```
 
-### API Security
-
-Test API endpoint security:
-
-```typescript
-test('should require authentication for protected endpoints', async ({ request }) => {
-  const response = await request.get('/api/protected');
-  expect(response.status()).toBe(401);
-
-  const response2 = await request.get('/api/protected', {
-    headers: {
-      Authorization: `Bearer ${invalidToken}`,
-    },
+test('expired token is handled correctly', async ({ page }) => {
+  // Set expired token
+  await page.goto('/');
+  await page.evaluate(() => {
+    localStorage.setItem('auth_token', 'expired_token');
   });
-  expect(response2.status()).toBe(403);
+  
+  // Try accessing protected route
+  await page.goto('/account/settings');
+  
+  // Should be redirected to login
+  await expect(page).toHaveURL(/login/);
+  
+  // Should show expired session message
+  await expect(page.getByText('Your session has expired')).toBeVisible();
 });
 ```
 
-### Best Practices
+### Rules for Copilot When Generating Security Test Code
 
-1. **Input Validation:**
-
-   - Test for XSS vulnerabilities
-   - Verify SQL injection protection
-   - Check file upload restrictions
-
-2. **Authentication:**
-
-   - Test password complexity rules
-   - Verify account lockout policies
-   - Check session timeout behavior
-
-3. **Authorization:**
-
-   - Test role-based access control
-   - Verify resource permissions
-   - Check for horizontal privilege escalation
-
-4. **API Security:**
-
-   - Validate rate limiting
-   - Test API key rotation
-   - Verify proper error handling
-
-5. **Data Protection:**
-   - Test sensitive data masking
-   - Verify secure transmission
-   - Check secure storage practices
+1. **Include header checks** for security headers
+2. **Test authentication boundaries** and protected routes
+3. **Test session expiration** handling
+4. **Verify CSRF protections** where relevant
+5. **Test input validation** to prevent injection attacks
+6. **Implement authorization tests** for role-based access controls
+7. **Add tests for secure cookie settings** where applicable
 
 ## Modern Web Features
 
-### Web Components
+> **🎯 Core Principle:** Use Playwright's built-in capabilities to test modern web features like Shadow DOM, service workers, and web components.
 
-Test Shadow DOM elements:
+### Shadow DOM
 
 ```typescript
-test('should interact with shadow DOM', async ({ page }) => {
-  // Access elements in shadow DOM
-  const button = page.locator('my-component').locator('>>> button');
-  await button.click();
-
-  // Assert on shadow DOM content
-  await expect(page.locator('my-component').locator('>>> .content')).toContainText('Updated');
+// ✅ GOOD: Testing shadow DOM components
+test('shadow DOM component works correctly', async ({ page }) => {
+  await page.goto('/components');
+  
+  // Playwright can pierce shadow DOM automatically
+  const shadowButton = page.getByRole('button', { name: 'Shadow Button' });
+  await shadowButton.click();
+  
+  // Test shadow DOM interaction results
+  await expect(page.getByText('Shadow DOM Clicked')).toBeVisible();
 });
 ```
 
 ### Service Workers
 
-Test service worker functionality:
-
 ```typescript
-test('should handle offline mode', async ({ context, page }) => {
-  // Wait for service worker registration
-  await page.waitForServiceWorker();
-
-  // Simulate offline mode
-  await context.setOffline(true);
-
-  // Verify offline functionality
-  await page.goto('/offline-page');
-  await expect(page.getByText('You are offline')).toBeVisible();
-});
-```
-
-### WebSocket Testing
-
-Monitor WebSocket connections:
-
-```typescript
-test('should handle WebSocket messages', async ({ page }) => {
-  // Listen for WebSocket frames
-  page.on('websocket', (ws) => {
-    ws.on('framesent', (data) => console.log(data));
-    ws.on('framereceived', (data) => console.log(data));
+// ✅ GOOD: Testing with service workers
+test('app works offline with service worker', async ({ page }) => {
+  // Go to the page and wait for service worker to be installed
+  await page.goto('/');
+  
+  // Wait for service worker to be registered
+  await page.waitForFunction(() => {
+    return navigator.serviceWorker.ready.then(() => true);
   });
-
-  await page.goto('/chat');
-
-  // Verify real-time updates
-  await page.getByRole('textbox').fill('Hello');
-  await page.getByRole('button', { name: 'Send' }).click();
-  await expect(page.getByTestId('messages')).toContainText('Hello');
+  
+  // Simulate offline mode
+  await page.context().setOffline(true);
+  
+  // Navigate to cached page
+  await page.goto('/offline-ready-page');
+  
+  // Should work offline
+  await expect(page.getByText('Offline Ready')).toBeVisible();
+  
+  // Back to online mode
+  await page.context().setOffline(false);
 });
 ```
 
-### Web Workers
-
-Test web worker functionality:
+### Web Components
 
 ```typescript
-test('should handle web worker computation', async ({ page }) => {
-  // Monitor worker creation
-  const worker = await page.waitForWorker(/worker\.js$/);
-
-  // Verify worker functionality
-  await page.getByRole('button', { name: 'Start Calculation' }).click();
-  await expect(page.getByTestId('result')).toHaveText('42');
+// ✅ GOOD: Testing web components
+test('custom element renders correctly', async ({ page }) => {
+  await page.goto('/web-components');
+  
+  // Test custom element
+  const customElement = page.getByRole('button', { name: 'Custom Button' });
+  await expect(customElement).toBeVisible();
+  
+  // Test slot content
+  await expect(page.locator('my-custom-element').getByText('Slot Content')).toBeVisible();
+  
+  // Test custom element interaction
+  await customElement.click();
+  await expect(page.getByText('Custom Event Fired')).toBeVisible();
 });
 ```
 
-### Modern JavaScript Features
+### Rules for Copilot When Generating Tests for Modern Web Features
 
-Test modules and async functionality:
+1. **Leverage Playwright's automatic shadow DOM support**
+2. **Test service worker functionality** with offline mode
+3. **Test web components** including slots and custom events
+4. **Test progressive enhancement** where relevant
+5. **Consider different browser compatibility** in your assertions
+6. **Test modern JavaScript features** with appropriate browser projects
+7. **Include appropriate waiting** for service worker initialization
+
+## Final Guidelines for Copilot
+
+> **🎯 Core Principle:** Generate code that follows all of the above best practices and is maintainable, readable, and robust.
+
+### Code Organization Checklist
+
+When generating Playwright test code, always follow this checklist:
+
+✅ **Page Object Model** is implemented for UI interactions  
+✅ **Locators** follow the priority order (role > text > form > semantic > testId > CSS/XPath)  
+✅ **Assertions** are web-first and auto-waiting  
+✅ **No hard-coded waits** in the generated code  
+✅ **Tests are independent** and can run in parallel  
+✅ **AAA pattern** is followed in all tests  
+✅ **Appropriate fixtures** are used or suggested  
+✅ **Error handling** is considered  
+✅ **Comments** explain complex logic  
+✅ **TypeScript** is used with proper typing  
+
+### Example of Complete Test Implementation
 
 ```typescript
-test('should handle dynamic imports', async ({ page }) => {
-  // Wait for dynamic import to complete
-  await page.waitForLoadState('domcontentloaded');
+// ✅ GOOD: Complete implementation following all best practices
+// tests/fixtures/shop-fixtures.ts
+import { test as baseTest } from '@playwright/test';
+import { HomePage } from '../../page-objects/HomePage';
+import { ProductPage } from '../../page-objects/ProductPage';
+import { CartPage } from '../../page-objects/CartPage';
 
-  // Verify module functionality
-  await expect(page.getByTestId('module-content')).toBeVisible();
+export const test = baseTest.extend({
+  homePage: async ({ page }, use) => {
+    await use(new HomePage(page));
+  },
+  productPage: async ({ page }, use) => {
+    await use(new ProductPage(page));
+  },
+  cartPage: async ({ page }, use) => {
+    await use(new CartPage(page));
+  },
+});
+
+export { expect } from '@playwright/test';
+
+// page-objects/ProductPage.ts
+import { type Page, type Locator } from '@playwright/test';
+
+export class ProductPage {
+  readonly page: Page;
+  
+  private readonly addToCartButton: Locator;
+  private readonly productTitle: Locator;
+  private readonly productPrice: Locator;
+  readonly successMessage: Locator;
+  
+  constructor(page: Page) {
+    this.page = page;
+    this.addToCartButton = page.getByRole('button', { name: 'Add to cart' });
+    this.productTitle = page.getByRole('heading', { level: 1 });
+    this.productPrice = page.getByTestId('product-price');
+    this.successMessage = page.getByText('Item added to your cart');
+  }
+  
+  async navigate(productId: string): Promise<void> {
+    await this.page.goto(`/products/${productId}`);
+  }
+  
+  async addToCart(): Promise<void> {
+    await this.addToCartButton.click();
+  }
+  
+  async getProductDetails(): Promise<{ title: string; price: string }> {
+    return {
+      title: await this.productTitle.textContent() || '',
+      price: await this.productPrice.textContent() || '',
+    };
+  }
+}
+
+// tests/specs/shopping/cart.spec.ts
+import { test, expect } from '../../fixtures/shop-fixtures';
+import { productData } from '../../../test-data/products';
+
+test.describe('Shopping Cart Functionality', () => {
+  test('user can add product to cart', async ({ page, productPage, cartPage }) => {
+    // Arrange
+    const testProduct = productData[0];
+    await productPage.navigate(testProduct.id);
+    
+    // Capture product details for later verification
+    const productDetails = await productPage.getProductDetails();
+    
+    // Act
+    await productPage.addToCart();
+    
+    // Assert - item added message
+    await expect(productPage.successMessage).toBeVisible();
+    
+    // Navigate to cart
+    await page.getByRole('link', { name: 'Cart' }).click();
+    
+    // Assert - product is in cart with correct details
+    await expect(cartPage.getCartItemByName(productDetails.title)).toBeVisible();
+    await expect(cartPage.getCartTotal()).toContainText(productDetails.price);
+  });
+  
+  test('user can remove product from cart', async ({ page, productPage, cartPage }) => {
+    // Arrange - add product to cart first
+    const testProduct = productData[0];
+    await productPage.navigate(testProduct.id);
+    await productPage.addToCart();
+    await page.getByRole('link', { name: 'Cart' }).click();
+    
+    // Act - remove item
+    await cartPage.removeItem(testProduct.name);
+    
+    // Assert
+    await expect(cartPage.emptyCartMessage).toBeVisible();
+    await expect(cartPage.getCartTotal()).toContainText('$0.00');
+  });
 });
 ```
-
-### Best Practices for Modern Web Features
-
-1. **Shadow DOM Testing:**
-
-   - Use `>>>` combinator for shadow DOM selectors
-   - Test component encapsulation
-   - Verify style isolation
-
-2. **Service Worker Testing:**
-
-   - Test installation and activation
-   - Verify cache strategies
-   - Test offline functionality
-   - Check push notifications
-
-3. **Real-time Testing:**
-
-   - Monitor WebSocket connections
-   - Test reconnection logic
-   - Verify message ordering
-   - Handle connection failures
-
-4. **Performance Considerations:**
-   - Monitor resource loading
-   - Test lazy loading behavior
-   - Verify progressive enhancement
-   - Check memory usage with workers

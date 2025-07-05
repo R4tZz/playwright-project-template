@@ -11,19 +11,21 @@ This guide reflects the latest practices recommended in the official Playwright 
 ## Table of Contents
 
 ### Core Principles
-1. [Recommended Folder Structure](#recommended-folder-structure) 
-2. [General Best Practices](#general-best-practices) 
-3. [Locators](#locators) - 📌 *Prioritize user-facing locators*
+
+1. [Recommended Folder Structure](#recommended-folder-structure)
+2. [General Best Practices](#general-best-practices)
+3. [Locators](#locators) - 📌 _Prioritize user-facing locators_
 
 ### Design Patterns
-4. [Page Object Model (POM)](#page-object-model-pom) - 📌 *Primary pattern for all UI tests*
+
+4. [Page Object Model (POM)](#page-object-model-pom) - 📌 _Primary pattern for all UI tests_
    - [Structure](#structure)
    - [Naming Conventions](#naming-conventions)
    - [Locators in POM](#locators-in-pom)
    - [Action Methods](#action-methods)
    - [Assertions](#assertions-in-pom)
    - [Example](#pom-example)
-5. [Custom Fixtures](#custom-fixtures) - 📌 *Use for setup/teardown and context sharing*
+5. [Custom Fixtures](#custom-fixtures) - 📌 _Use for setup/teardown and context sharing_
    - [Purpose](#purpose)
    - [Creating Fixtures](#creating-fixtures)
    - [Using Fixtures](#using-fixtures)
@@ -31,11 +33,12 @@ This guide reflects the latest practices recommended in the official Playwright 
    - [Example](#fixture-example)
 
 ### Test Implementation
-6. [Assertions](#assertions) - 📌 *Always use web-first assertions*
+
+6. [Assertions](#assertions) - 📌 _Always use web-first assertions_
    - [Web-First Assertions](#web-first-assertions)
    - [Soft Assertions](#soft-assertions)
    - [Common Assertions](#common-assertions)
-7. [Waiting Mechanisms](#waiting-mechanisms) - 📌 *Avoid hard waits*
+7. [Waiting Mechanisms](#waiting-mechanisms) - 📌 _Avoid hard waits_
 8. [Test Structure and Naming](#test-structure-and-naming)
 9. [Configuration (`playwright.config.ts`)](#configuration-playwrightconfigts)
 10. [Parallel Testing](#parallel-testing)
@@ -46,11 +49,12 @@ This guide reflects the latest practices recommended in the official Playwright 
 15. [Miscellaneous](#miscellaneous)
 
 ### Advanced Testing Scenarios
-16. [API Testing and Authentication](#api-testing-and-authentication) - 📌 *Use request context*
-17. [Visual Testing and Snapshots](#visual-testing-and-snapshots) - 📌 *Component-focused screenshots*
-18. [Mobile Testing](#mobile-testing) - 📌 *Use device emulation*
-19. [Security Testing](#security-testing) - 📌 *Test security headers and policies*
-20. [Modern Web Features](#modern-web-features) - 📌 *Handle shadow DOM and service workers*
+
+16. [API Testing and Authentication](#api-testing-and-authentication) - 📌 _Use request context_
+17. [Visual Testing and Snapshots](#visual-testing-and-snapshots) - 📌 _Component-focused screenshots_
+18. [Mobile Testing](#mobile-testing) - 📌 _Use device emulation_
+19. [Security Testing](#security-testing) - 📌 _Test security headers and policies_
+20. [Modern Web Features](#modern-web-features) - 📌 _Handle shadow DOM and service workers_
 
 ## 🚨 Copilot Must Follow Rules
 
@@ -68,13 +72,13 @@ When generating Playwright test code, ALWAYS:
 
 > **🎯 Core Principle:** Follow these best practices to ensure your Playwright tests are reliable, maintainable, and provide clear results when failures occur.
 
-| ✅ DO | ❌ DON'T |
-|-------|---------|
-| Keep tests independent | Allow tests to depend on other tests' state |
+| ✅ DO                            | ❌ DON'T                                            |
+| -------------------------------- | --------------------------------------------------- |
+| Keep tests independent           | Allow tests to depend on other tests' state         |
 | Use `test.describe` for grouping | Create overly large test files without organization |
-| Use Playwright's auto-waiting | Use `page.waitForTimeout()` for synchronization |
-| Use async/await consistently | Mix promise chains with async/await |
-| Set short, explicit timeouts | Rely on default timeouts for everything |
+| Use Playwright's auto-waiting    | Use `page.waitForTimeout()` for synchronization     |
+| Use async/await consistently     | Mix promise chains with async/await                 |
+| Set short, explicit timeouts     | Rely on default timeouts for everything             |
 
 ```typescript
 // ✅ GOOD: Independent tests with clear grouping
@@ -88,7 +92,7 @@ test.describe('Login Functionality', () => {
   });
 
   test('should show error with invalid credentials', async ({ page }) => {
-    // Test implementation  
+    // Test implementation
   });
 });
 
@@ -156,13 +160,13 @@ your-project-root/
 
 ### Key Principles for Folder Organization
 
-| Directory | Purpose | File Types | Naming Convention |
-|-----------|---------|------------|-------------------|
-| page-objects/ | UI interaction classes | TypeScript classes | PascalCase with Page/Component suffix |
-| tests/fixtures/ | Test setup and context | TypeScript fixture files | camelCase |
-| tests/specs/ | Test specifications | Test files (.spec.ts) | kebab-case.spec.ts |
-| utils/ | Helper functions | Utility modules | camelCase |
-| test-data/ | Test datasets | JSON, CSV, etc. | kebab-case |
+| Directory       | Purpose                | File Types               | Naming Convention                     |
+| --------------- | ---------------------- | ------------------------ | ------------------------------------- |
+| page-objects/   | UI interaction classes | TypeScript classes       | PascalCase with Page/Component suffix |
+| tests/fixtures/ | Test setup and context | TypeScript fixture files | camelCase                             |
+| tests/specs/    | Test specifications    | Test files (.spec.ts)    | kebab-case.spec.ts                    |
+| utils/          | Helper functions       | Utility modules          | camelCase                             |
+| test-data/      | Test datasets          | JSON, CSV, etc.          | kebab-case                            |
 
 ## Locators
 
@@ -171,38 +175,43 @@ your-project-root/
 ### Locator Priority (Most to Least Preferred)
 
 1. **Role-based locators**
+
    ```typescript
-   page.getByRole('button', { name: 'Submit' })
-   page.getByRole('textbox', { name: 'Email' })
+   page.getByRole('button', { name: 'Submit' });
+   page.getByRole('textbox', { name: 'Email' });
    ```
 
 2. **Text-based locators**
+
    ```typescript
-   page.getByText('Welcome back')
-   page.getByText(/Terms of service/i)
+   page.getByText('Welcome back');
+   page.getByText(/Terms of service/i);
    ```
 
 3. **Form-specific locators**
+
    ```typescript
-   page.getByLabel('Password')
-   page.getByPlaceholder('Enter your email')
+   page.getByLabel('Password');
+   page.getByPlaceholder('Enter your email');
    ```
 
 4. **Semantic locators**
+
    ```typescript
-   page.getByAltText('Company logo')
-   page.getByTitle('User profile')
+   page.getByAltText('Company logo');
+   page.getByTitle('User profile');
    ```
 
 5. **Test ID locators** (when semantic locators aren't feasible)
+
    ```typescript
-   page.getByTestId('checkout-button')
+   page.getByTestId('checkout-button');
    ```
 
 6. **CSS and XPath** (use only as a last resort)
    ```typescript
-   page.locator('.submit-button') // Less preferred
-   page.locator('//button[contains(@class, "submit")]') // Least preferred
+   page.locator('.submit-button'); // Less preferred
+   page.locator('//button[contains(@class, "submit")]'); // Least preferred
    ```
 
 ### Locator Filtering & Chaining
@@ -246,12 +255,12 @@ import { DashboardPage } from './DashboardPage';
 export class LoginPage {
   // Page instance passed to constructor
   readonly page: Page;
-  
+
   // Private locators
   private readonly usernameInput: Locator;
   private readonly passwordInput: Locator;
   private readonly loginButton: Locator;
-  
+
   // Public locator (for assertions)
   readonly errorMessage: Locator;
 
@@ -298,17 +307,17 @@ export class LoginPage {
 
 ### Naming Conventions
 
-| Element | Convention | Example |
-|---------|------------|---------|
-| Files | PascalCase with Page/Component suffix | `LoginPage.ts`, `HeaderComponent.ts` |
-| Classes | Same as file name | `LoginPage`, `HeaderComponent` |
-| Methods | camelCase verbs or verb phrases | `login()`, `fillUsername()`, `navigateTo()` |
-| Locators | camelCase with element type | `usernameInput`, `loginButton`, `errorMessage` |
+| Element  | Convention                            | Example                                        |
+| -------- | ------------------------------------- | ---------------------------------------------- |
+| Files    | PascalCase with Page/Component suffix | `LoginPage.ts`, `HeaderComponent.ts`           |
+| Classes  | Same as file name                     | `LoginPage`, `HeaderComponent`                 |
+| Methods  | camelCase verbs or verb phrases       | `login()`, `fillUsername()`, `navigateTo()`    |
+| Locators | camelCase with element type           | `usernameInput`, `loginButton`, `errorMessage` |
 
 ### Locators in POM
 
 - Define as private readonly properties unless needed for assertions
-- Initialize in the constructor 
+- Initialize in the constructor
 - Use semantic locators following the locator priority guidelines
 
 ### Action Methods
@@ -341,6 +350,7 @@ export class LoginPage {
 ### Purpose
 
 Fixtures provide:
+
 - Reusable test setup and teardown
 - Sharing state between tests when necessary
 - Access to commonly used Page Objects
@@ -369,31 +379,31 @@ export const test = baseTest.extend<AppFixtures>({
     const loginPage = new LoginPage(page);
     await use(loginPage);
   },
-  
+
   dashboardPage: async ({ page }, use) => {
     const dashboardPage = new DashboardPage(page);
     await use(dashboardPage);
   },
-  
+
   // Auth state fixture (can be scoped differently)
   loggedInState: async ({ page }, use) => {
     // Set up authentication state
     const username = 'testuser';
     await page.goto('/login');
     // Login via API or faster method than UI
-    await page.evaluate(user => {
+    await page.evaluate((user) => {
       localStorage.setItem('auth_token', 'sample-token-123');
       return { username, token: 'sample-token-123' };
     }, username);
-    
+
     // Provide the state to the test
     await use({ username, token: 'sample-token-123' });
-    
+
     // Clean up after test
     await page.evaluate(() => {
       localStorage.clear();
     });
-  }
+  },
 });
 
 // Export expect for convenience
@@ -414,10 +424,10 @@ test('user can navigate to dashboard after login', async ({ loginPage, page }) =
 });
 
 // Using authenticated state
-test('authenticated user sees personalized dashboard', async ({ 
-  page, 
-  dashboardPage, 
-  loggedInState 
+test('authenticated user sees personalized dashboard', async ({
+  page,
+  dashboardPage,
+  loggedInState,
 }) => {
   await page.goto('/dashboard');
   const welcomeMessage = page.getByText(`Welcome, ${loggedInState.username}`);
@@ -434,7 +444,7 @@ test('authenticated user sees personalized dashboard', async ({
 ### Rules for Copilot When Generating Fixtures
 
 1. **Create a fixtures.ts file** in the tests/fixtures directory
-2. **Define a proper TypeScript interface** for the fixture types 
+2. **Define a proper TypeScript interface** for the fixture types
 3. **Extend the base test** with custom fixtures
 4. **Organize fixtures by responsibility** (pages, auth, data, etc.)
 5. **Use proper scoping** based on fixture responsibility and performance
@@ -456,7 +466,7 @@ await expect(page.locator('#status')).toHaveText('Complete');
 await expect(page).toHaveURL(/dashboard/);
 
 // ❌ BAD: Non-web-first assertions
-const isVisible = await page.getByRole('button').isVisible(); 
+const isVisible = await page.getByRole('button').isVisible();
 expect(isVisible).toBe(true); // Doesn't auto-wait
 ```
 
@@ -468,12 +478,12 @@ Soft assertions continue the test even after a failure, collecting multiple fail
 // ✅ GOOD: Soft assertions to collect multiple failures
 test('multiple validations on page', async ({ page }) => {
   await page.goto('/profile');
-  
+
   // These won't stop the test if they fail
   await expect.soft(page.getByText('Username')).toBeVisible();
   await expect.soft(page.getByText('Email')).toBeVisible();
   await expect.soft(page.getByText('Settings')).toBeVisible();
-  
+
   // Continue with the test...
   await page.getByRole('button', { name: 'Edit' }).click();
 });
@@ -481,17 +491,17 @@ test('multiple validations on page', async ({ page }) => {
 
 ### Common Assertions
 
-| Assertion | Use Case | Example |
-|-----------|----------|---------|
-| `toBeVisible()` | Element should be visible | `await expect(locator).toBeVisible()` |
-| `toBeHidden()` | Element should not be visible | `await expect(locator).toBeHidden()` |
-| `toHaveText()` | Element should contain text | `await expect(locator).toHaveText('Expected')` |
-| `toContainText()` | Element should include text | `await expect(locator).toContainText('part')` |
-| `toHaveValue()` | Input should have value | `await expect(locator).toHaveValue('text')` |
-| `toBeChecked()` | Checkbox should be checked | `await expect(locator).toBeChecked()` |
+| Assertion           | Use Case                      | Example                                                   |
+| ------------------- | ----------------------------- | --------------------------------------------------------- |
+| `toBeVisible()`     | Element should be visible     | `await expect(locator).toBeVisible()`                     |
+| `toBeHidden()`      | Element should not be visible | `await expect(locator).toBeHidden()`                      |
+| `toHaveText()`      | Element should contain text   | `await expect(locator).toHaveText('Expected')`            |
+| `toContainText()`   | Element should include text   | `await expect(locator).toContainText('part')`             |
+| `toHaveValue()`     | Input should have value       | `await expect(locator).toHaveValue('text')`               |
+| `toBeChecked()`     | Checkbox should be checked    | `await expect(locator).toBeChecked()`                     |
 | `toHaveAttribute()` | Element should have attribute | `await expect(locator).toHaveAttribute('type', 'submit')` |
-| `toHaveURL()` | Page should have URL | `await expect(page).toHaveURL(/pattern/)` |
-| `toHaveTitle()` | Page should have title | `await expect(page).toHaveTitle('Page Title')` |
+| `toHaveURL()`       | Page should have URL          | `await expect(page).toHaveURL(/pattern/)`                 |
+| `toHaveTitle()`     | Page should have title        | `await expect(page).toHaveTitle('Page Title')`            |
 
 ### Rules for Copilot When Generating Assertions
 
@@ -509,6 +519,7 @@ test('multiple validations on page', async ({ page }) => {
 ### Auto-Waiting (Preferred)
 
 Playwright's built-in auto-waiting:
+
 - **Actions** like click(), fill() wait for elements to be actionable
 - **Web-first assertions** wait for conditions to be met
 - **Navigation methods** wait for page loads
@@ -519,7 +530,7 @@ Playwright's built-in auto-waiting:
 // ✅ GOOD: Explicit waiting for specific conditions
 await page.waitForURL('/dashboard');
 await page.waitForSelector('#loaded-content');
-await page.waitForResponse(response => response.url().includes('/api/data'));
+await page.waitForResponse((response) => response.url().includes('/api/data'));
 await page.waitForFunction(() => window.status === 'ready');
 
 // ✅ GOOD: Custom waiting with timeout
@@ -536,14 +547,14 @@ await page.waitForTimeout(2000); // Avoid in production code
 // Wait for both a response and a navigation
 const [response, _] = await Promise.all([
   page.waitForResponse('/api/submit'),
-  page.getByRole('button', { name: 'Submit' }).click()
+  page.getByRole('button', { name: 'Submit' }).click(),
 ]);
 ```
 
 ### Rules for Copilot When Generating Waiting Code
 
 1. **Never use `page.waitForTimeout()`** except in debugging comments
-2. **Rely on Playwright's auto-waiting** for most scenarios 
+2. **Rely on Playwright's auto-waiting** for most scenarios
 3. **Use explicit waits** only when auto-waiting isn't sufficient
 4. **Prefer custom conditions** over arbitrary time delays
 5. **Use Promise.all** for multiple simultaneous events
@@ -566,28 +577,28 @@ test.describe('Login Functionality', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/login');
   });
-  
+
   test('should allow login with valid credentials', async ({ page }) => {
     // Arrange
     const loginPage = new LoginPage(page);
     const username = 'validUser';
     const password = 'validPass123';
-    
+
     // Act
     await loginPage.login(username, password);
-    
+
     // Assert
     await expect(page).toHaveURL(/dashboard/);
     await expect(page.getByText('Welcome back')).toBeVisible();
   });
-  
+
   test('should show error with invalid credentials', async ({ page }) => {
     // Arrange
     const loginPage = new LoginPage(page);
-    
+
     // Act
     await loginPage.login('invalid', 'wrong');
-    
+
     // Assert
     await expect(loginPage.errorMessage).toBeVisible();
     await expect(page).toHaveURL(/login/); // Still on login page
@@ -597,11 +608,11 @@ test.describe('Login Functionality', () => {
 
 ### Test Naming Conventions
 
-| Pattern | Example |
-|---------|---------|
-| should + expected behavior | `'should redirect after login'` |
+| Pattern                     | Example                          |
+| --------------------------- | -------------------------------- |
+| should + expected behavior  | `'should redirect after login'`  |
 | descriptive action + result | `'login redirects to dashboard'` |
-| user-centric | `'user can submit contact form'` |
+| user-centric                | `'user can submit contact form'` |
 
 ### Hooks Usage
 
@@ -635,26 +646,26 @@ dotenv.config();
 export default defineConfig({
   // Global test timeout
   timeout: 30000,
-  
+
   // Test directory
   testDir: './tests',
-  
+
   // Pattern for test files
   testMatch: '**/*.spec.ts',
-  
+
   // Maximum test failures before stopping
   maxFailures: process.env.CI ? 10 : undefined,
-  
+
   // Retry failed tests on CI
   retries: process.env.CI ? 2 : 0,
-  
+
   // Reporters
   reporter: [
-    ['html'],  // Generate HTML report
+    ['html'], // Generate HTML report
     ['json', { outputFile: 'test-results/results.json' }],
     ['junit', { outputFile: 'test-results/junit.xml' }],
   ],
-  
+
   // Configure projects for different browsers
   projects: [
     {
@@ -680,7 +691,7 @@ export default defineConfig({
     // Project with specific options for visual testing
     {
       name: 'visual-tests',
-      use: { 
+      use: {
         ...devices['Desktop Chrome'],
         screenshot: 'on',
         video: 'on',
@@ -688,28 +699,28 @@ export default defineConfig({
       testMatch: '**/*.visual.spec.ts',
     },
   ],
-  
+
   // Global test options
   use: {
     // Base URL to use in page.goto() calls
     baseURL: process.env.BASE_URL || 'http://localhost:3000',
-    
+
     // Browser options
     headless: true,
-    
+
     // Action options
     actionTimeout: 10000,
     navigationTimeout: 15000,
-    
+
     // Capture screenshot only on failure
     screenshot: { mode: 'only-on-failure', fullPage: true },
-    
+
     // Capture video only on failure
     video: { mode: 'retain-on-failure' },
-    
+
     // Capture trace only on failure
     trace: { mode: 'retain-on-failure' },
-    
+
     // Viewport size
     viewport: { width: 1280, height: 720 },
   },
@@ -802,14 +813,14 @@ test('logged in user can access profile', async ({ page }) => {
 // or use the UI mode: npx playwright test --ui
 test('has title', async ({ page }) => {
   await page.goto('https://playwright.dev/');
-  
+
   // ✅ GOOD: Debugging aids
   console.log('Current URL:', page.url());
-  
+
   // Conditional debugging with comments for how to enable
   // To enable: DEBUG=pw:api npx playwright test
   // await page.pause(); // Uncomment to pause execution for debugging
-  
+
   await expect(page).toHaveTitle(/Playwright/);
 });
 ```
@@ -832,15 +843,15 @@ export default defineConfig({
 // ✅ GOOD: Take screenshots during test for debugging
 test('visual debugging example', async ({ page }) => {
   await page.goto('/complex-page');
-  
+
   // Helpful for debugging - will save to test-results directory
   await page.screenshot({ path: 'test-results/before-action.png' });
-  
+
   await page.getByRole('button', { name: 'Submit' }).click();
-  
+
   // Another debug screenshot after action
   await page.screenshot({ path: 'test-results/after-action.png' });
-  
+
   await expect(page.getByText('Success')).toBeVisible();
 });
 ```
@@ -867,7 +878,7 @@ import { test, expect } from '@playwright/test';
 test('API returns correct user data', async ({ request }) => {
   // Use the request fixture for API calls
   const response = await request.get('/api/users/1');
-  
+
   // Assert on status and response body
   expect(response.status()).toBe(200);
   const body = await response.json();
@@ -895,29 +906,29 @@ export const test = baseTest.extend<AuthFixtures>({
       data: {
         username: 'user@example.com',
         password: process.env.USER_PASSWORD || 'defaultPass',
-      }
+      },
     });
-    
+
     const { token } = await response.json();
-    
+
     // Set local storage before navigating
     await page.goto('/');
     await page.evaluate((authToken) => {
       localStorage.setItem('auth_token', authToken);
     }, token);
-    
+
     // Refresh to apply authentication
     await page.reload();
-    
+
     // Pass the authenticated page to the test
     await use(page);
-    
+
     // Clean up after test
     await page.evaluate(() => {
       localStorage.clear();
     });
   },
-  
+
   // Admin-specific authentication
   adminPage: async ({ page, request }, use) => {
     // Similar pattern for admin authentication
@@ -946,10 +957,10 @@ export const test = baseTest.extend<AuthFixtures>({
 // ✅ GOOD: Component-focused visual testing
 test('header component visual regression', async ({ page }) => {
   await page.goto('/');
-  
+
   // Focus on a specific component
   const header = page.getByRole('banner');
-  
+
   // Component-focused screenshot
   expect(await header.screenshot()).toMatchSnapshot('header.png');
 });
@@ -962,7 +973,7 @@ test('header component visual regression', async ({ page }) => {
 test('API response snapshot', async ({ request }) => {
   const response = await request.get('/api/products');
   const body = await response.json();
-  
+
   // Snapshot the API response
   expect(JSON.stringify(body, null, 2)).toMatchSnapshot('products-api.txt');
 });
@@ -1008,15 +1019,15 @@ export default defineConfig({
 // mobile.spec.ts
 test('responsive design on mobile', async ({ page }) => {
   await page.goto('/');
-  
+
   // Test mobile-specific elements
   const mobileMenu = page.getByRole('button', { name: 'Menu' });
   await expect(mobileMenu).toBeVisible();
-  
+
   // Test mobile interactions
   await mobileMenu.click();
   await expect(page.getByRole('navigation')).toBeVisible();
-  
+
   // Test touch events
   await page.touchscreen.tap(100, 200);
 });
@@ -1028,18 +1039,18 @@ test('responsive design on mobile', async ({ page }) => {
 // ✅ GOOD: Testing across viewport sizes
 test('responsive layout adapts to screen size', async ({ page }) => {
   await page.goto('/responsive-page');
-  
+
   // Test desktop layout
   await page.setViewportSize({ width: 1280, height: 800 });
   const desktopMenu = page.getByRole('navigation');
   await expect(desktopMenu).toBeVisible();
-  
+
   // Test tablet layout
   await page.setViewportSize({ width: 768, height: 1024 });
   await expect(desktopMenu).toBeHidden();
   const tabletMenu = page.getByRole('button', { name: 'Menu' });
   await expect(tabletMenu).toBeVisible();
-  
+
   // Test mobile layout
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByTestId('mobile-header')).toBeVisible();
@@ -1067,7 +1078,7 @@ test('responsive layout adapts to screen size', async ({ page }) => {
 test('page has proper security headers', async ({ page, request }) => {
   // Load the page
   const response = await request.get('/');
-  
+
   // Check security headers
   const headers = response.headers();
   expect(headers['strict-transport-security']).toBeTruthy();
@@ -1084,7 +1095,7 @@ test('page has proper security headers', async ({ page, request }) => {
 test('protected route redirects unauthenticated users', async ({ page }) => {
   // Try to access protected route without auth
   await page.goto('/account/settings');
-  
+
   // Should redirect to login
   await expect(page).toHaveURL(/login/);
 });
@@ -1095,13 +1106,13 @@ test('expired token is handled correctly', async ({ page }) => {
   await page.evaluate(() => {
     localStorage.setItem('auth_token', 'expired_token');
   });
-  
+
   // Try accessing protected route
   await page.goto('/account/settings');
-  
+
   // Should be redirected to login
   await expect(page).toHaveURL(/login/);
-  
+
   // Should show expired session message
   await expect(page.getByText('Your session has expired')).toBeVisible();
 });
@@ -1127,11 +1138,11 @@ test('expired token is handled correctly', async ({ page }) => {
 // ✅ GOOD: Testing shadow DOM components
 test('shadow DOM component works correctly', async ({ page }) => {
   await page.goto('/components');
-  
+
   // Playwright can pierce shadow DOM automatically
   const shadowButton = page.getByRole('button', { name: 'Shadow Button' });
   await shadowButton.click();
-  
+
   // Test shadow DOM interaction results
   await expect(page.getByText('Shadow DOM Clicked')).toBeVisible();
 });
@@ -1144,21 +1155,21 @@ test('shadow DOM component works correctly', async ({ page }) => {
 test('app works offline with service worker', async ({ page }) => {
   // Go to the page and wait for service worker to be installed
   await page.goto('/');
-  
+
   // Wait for service worker to be registered
   await page.waitForFunction(() => {
     return navigator.serviceWorker.ready.then(() => true);
   });
-  
+
   // Simulate offline mode
   await page.context().setOffline(true);
-  
+
   // Navigate to cached page
   await page.goto('/offline-ready-page');
-  
+
   // Should work offline
   await expect(page.getByText('Offline Ready')).toBeVisible();
-  
+
   // Back to online mode
   await page.context().setOffline(false);
 });
@@ -1170,14 +1181,14 @@ test('app works offline with service worker', async ({ page }) => {
 // ✅ GOOD: Testing web components
 test('custom element renders correctly', async ({ page }) => {
   await page.goto('/web-components');
-  
+
   // Test custom element
   const customElement = page.getByRole('button', { name: 'Custom Button' });
   await expect(customElement).toBeVisible();
-  
+
   // Test slot content
   await expect(page.locator('my-custom-element').getByText('Slot Content')).toBeVisible();
-  
+
   // Test custom element interaction
   await customElement.click();
   await expect(page.getByText('Custom Event Fired')).toBeVisible();
@@ -1211,7 +1222,7 @@ When generating Playwright test code, always follow this checklist:
 ✅ **Appropriate fixtures** are used or suggested  
 ✅ **Error handling** is considered  
 ✅ **Comments** explain complex logic  
-✅ **TypeScript** is used with proper typing  
+✅ **TypeScript** is used with proper typing
 
 ### Example of Complete Test Implementation
 
@@ -1242,12 +1253,12 @@ import { type Page, type Locator } from '@playwright/test';
 
 export class ProductPage {
   readonly page: Page;
-  
+
   private readonly addToCartButton: Locator;
   private readonly productTitle: Locator;
   private readonly productPrice: Locator;
   readonly successMessage: Locator;
-  
+
   constructor(page: Page) {
     this.page = page;
     this.addToCartButton = page.getByRole('button', { name: 'Add to cart' });
@@ -1255,19 +1266,19 @@ export class ProductPage {
     this.productPrice = page.getByTestId('product-price');
     this.successMessage = page.getByText('Item added to your cart');
   }
-  
+
   async navigate(productId: string): Promise<void> {
     await this.page.goto(`/products/${productId}`);
   }
-  
+
   async addToCart(): Promise<void> {
     await this.addToCartButton.click();
   }
-  
+
   async getProductDetails(): Promise<{ title: string; price: string }> {
     return {
-      title: await this.productTitle.textContent() || '',
-      price: await this.productPrice.textContent() || '',
+      title: (await this.productTitle.textContent()) || '',
+      price: (await this.productPrice.textContent()) || '',
     };
   }
 }
@@ -1281,34 +1292,34 @@ test.describe('Shopping Cart Functionality', () => {
     // Arrange
     const testProduct = productData[0];
     await productPage.navigate(testProduct.id);
-    
+
     // Capture product details for later verification
     const productDetails = await productPage.getProductDetails();
-    
+
     // Act
     await productPage.addToCart();
-    
+
     // Assert - item added message
     await expect(productPage.successMessage).toBeVisible();
-    
+
     // Navigate to cart
     await page.getByRole('link', { name: 'Cart' }).click();
-    
+
     // Assert - product is in cart with correct details
     await expect(cartPage.getCartItemByName(productDetails.title)).toBeVisible();
     await expect(cartPage.getCartTotal()).toContainText(productDetails.price);
   });
-  
+
   test('user can remove product from cart', async ({ page, productPage, cartPage }) => {
     // Arrange - add product to cart first
     const testProduct = productData[0];
     await productPage.navigate(testProduct.id);
     await productPage.addToCart();
     await page.getByRole('link', { name: 'Cart' }).click();
-    
+
     // Act - remove item
     await cartPage.removeItem(testProduct.name);
-    
+
     // Assert
     await expect(cartPage.emptyCartMessage).toBeVisible();
     await expect(cartPage.getCartTotal()).toContainText('$0.00');

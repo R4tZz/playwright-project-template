@@ -53,7 +53,7 @@ export default defineConfig({
   maxFailures: process.env.CI ? 0 : 5,
 
   /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.CI ? 1 : '50%',
 
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
@@ -75,7 +75,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    baseURL: process.env.BASE_URL ?? 'http://localhost:3000',
 
     /* Configure actionability checks for more reliable interactions */
     actionTimeout: 15000,

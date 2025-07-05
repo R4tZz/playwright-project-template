@@ -1,23 +1,75 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "CommonJS",
-    "lib": ["ESNext", "DOM"],
-    "moduleResolution": "node",
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "strict": true,
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true
+    // Target and Module Configuration
+    "target": "ES2022", // Compile to ES2022 for modern browser features used in Playwright
+    "module": "CommonJS", // Use CommonJS module system for Node.js compatibility
+    "lib": ["ES2022", "DOM", "DOM.Iterable"], // Include ES2022, DOM APIs for browser interaction
+    "moduleResolution": "node", // Use Node.js-style module resolution
+
+    // Import/Export Configuration
+    "esModuleInterop": true, // Allow default imports from modules with no default export
+    "allowSyntheticDefaultImports": true, // Enable importing ES modules as if they had default exports
+    "resolveJsonModule": true, // Allow importing JSON files as modules (useful for test data)
+    "isolatedModules": true, // Ensure each file can be transpiled independently
+
+    // Type Checking and Strictness
+    "strict": true, // Enable all strict type checking options
+    "noImplicitAny": true, // Error on expressions with an implied 'any' type
+    "noImplicitReturns": true, // Error when not all code paths return a value
+    "noImplicitThis": true, // Error on 'this' expressions with an implied 'any' type
+    "noUnusedLocals": true, // Error on unused local variables (helps keep tests clean)
+    "noUnusedParameters": true, // Error on unused function parameters
+    "exactOptionalPropertyTypes": true, // Enforce exact types for optional properties
+    "noUncheckedIndexedAccess": true, // Add undefined to index signature results
+    "noImplicitOverride": true, // Require explicit override keyword for method overrides
+
+    // Output Configuration
+    "noEmit": true, // Don't emit JavaScript files (Playwright runs TypeScript directly)
+    "removeComments": false, // Keep comments in output for better debugging
+    "sourceMap": true, // Generate source maps for debugging
+    "declaration": false, // Don't generate declaration files (not needed for tests)
+
+    // Path Resolution
+    "baseUrl": ".", // Set base directory for module resolution
+    "paths": {
+      "@pages/*": ["page-objects/*"], // Alias for page object imports
+      "@tests/*": ["tests/*"], // Alias for test files
+      "@utils/*": ["utils/*"], // Alias for utility functions
+      "@fixtures/*": ["tests/fixtures/*"], // Alias for test fixtures
+      "@test-data/*": ["test-data/*"] // Alias for test data files
+    },
+
+    // Advanced Options
+    "skipLibCheck": true, // Skip type checking of declaration files for faster compilation
+    "forceConsistentCasingInFileNames": true, // Enforce consistent file name casing
+    "allowUnreachableCode": false, // Error on unreachable code (helps catch test logic errors)
+    "allowUnusedLabels": false, // Error on unused labels
+    "noFallthroughCasesInSwitch": true, // Error on switch case fallthrough
+    "noPropertyAccessFromIndexSignature": false, // Allow dot notation for index signatures
+
+    // Playwright-specific types
+    "types": ["node", "@playwright/test"] // Include Node.js and Playwright type definitions
   },
   "include": [
-    "tests/**/*.ts",
-    "page-objects/**/*.ts",
-    "utils/**/*.ts",
-    "tests/fixtures/**/*.ts",
-    "playwright.config.ts"
+    "tests/**/*.ts", // Include all TypeScript files in tests directory
+    "page-objects/**/*.ts", // Include all page object files
+    "utils/**/*.ts", // Include all utility files
+    "test-data/**/*.ts", // Include test data TypeScript files
+    "playwright.config.ts", // Include Playwright configuration
+    "global-setup.ts", // Include global setup file if present
+    "global-teardown.ts" // Include global teardown file if present
   ],
-  "exclude": ["node_modules", "dist"]
+  "exclude": [
+    "node_modules", // Exclude installed packages
+    "dist", // Exclude compiled output directory
+    "build", // Exclude build output directory
+    "test-results", // Exclude Playwright test results
+    "playwright-report", // Exclude Playwright HTML reports
+    "blob-report", // Exclude Playwright blob reports
+    "reports" // Exclude custom report directories
+  ],
+  "ts-node": {
+    "esm": false, // Use CommonJS module system for ts-node execution
+    "experimentalSpecifierResolution": "node" // Use Node.js-style module resolution for ts-node
+  }
 }
